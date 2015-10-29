@@ -2,10 +2,12 @@ package cs224n.corefsystems;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.ArrayList;
 
 import cs224n.coref.ClusteredMention;
 import cs224n.coref.Document;
 import cs224n.coref.Entity;
+import cs224n.coref.Mention;
 import cs224n.util.Pair;
 
 public class AllSingleton implements CoreferenceSystem {
@@ -18,8 +20,12 @@ public class AllSingleton implements CoreferenceSystem {
 
 	@Override
 	public List<ClusteredMention> runCoreference(Document doc) {
-		// TODO Auto-generated method stub
-		return null;
+		List<ClusteredMention> mentions = new ArrayList<ClusteredMention>();
+		for(Mention m : doc.getMentions())
+		{
+			mentions.add(m.markSingleton());
+		}
+		return mentions;
 	}
 
 }
