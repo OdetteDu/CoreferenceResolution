@@ -2,23 +2,20 @@ package cs224n.corefsystems;
 
 import java.util.*;
 
-
-import cs224n.coref.ClusteredMention;
-import cs224n.coref.Document;
 import cs224n.coref.*;
 import cs224n.util.Pair;
 
 public class BetterBaseline implements CoreferenceSystem {
-	
+
 	private Map<String, Set<String>> headWordMap;
-	
+
 	private void addToHeadWordMap(String word1, String word2)
 	{
 		if (headWordMap == null)
 		{
 			headWordMap = new HashMap<String, Set<String>>();
 		}
-		
+
 		if (headWordMap.containsKey(word1))
 		{
 			headWordMap.get(word1).add(word2);
@@ -29,7 +26,7 @@ public class BetterBaseline implements CoreferenceSystem {
 			temp.add(word2);
 			headWordMap.put(word1, temp);
 		}
-		
+
 		if (headWordMap.containsKey(word2))
 		{
 			headWordMap.get(word2).add(word1);
@@ -44,7 +41,7 @@ public class BetterBaseline implements CoreferenceSystem {
 
 	@Override
 	public void train(Collection<Pair<Document, List<Entity>>> trainingData) {
-		
+
 		for (Pair<Document, List<Entity>> pair : trainingData)
 		{
 			for (Entity entity : pair.getSecond())
@@ -73,20 +70,44 @@ public class BetterBaseline implements CoreferenceSystem {
 
 	@Override
 	public List<ClusteredMention> runCoreference(Document doc) {
-		// TODO Auto-generated method stub
-	
-	ArrayList<ClusteredMention> clusters = new ArrayList<ClusteredMention>();
-	for (Mention m : doc.getMentions()) {
-        if (m.gloss().equals("God the Protector")) {
-        System.out.println(m.sentence.parse);
-	System.out.println(m.parse);
-        System.out.println(m.beginIndexInclusive + " "+m.endIndexExclusive);
-        System.out.println(m.gloss());
-}
-     clusters.add(m.markSingleton());
-}
 
-	return clusters;
+		List<ClusteredMention> mentions = new ArrayList<ClusteredMention>();
+		Map<String,Entity> clusters = new HashMap<String,Entity>();
+
+		for(Mention m : doc.getMentions())
+		{
+			String mentionString = m.gloss();
+			if(clusters.containsKey(mentionString))
+			{
+				mentions.add(m.markCoreferent(clusters.get(mentionString)));
+			} 
+			else 
+			{
+				boolean isHeadWordMatch = false;
+				String headWord = m.headWord();
+				if(this.headWordMap.containsKey(headWord))
+				{
+					for(String coreferencedHeadWord : headWordMap.get(headWord))
+					{
+						if (clusters.containsKey(coreferencedHeadWord))
+						{
+							isHeadWordMatch = true;
+							mentions.add(m.markCoreferent(clusters.get(coreferencedHeadWord)));
+							break;
+						}
+					}
+				}
+				
+				if (!isHeadWordMatch)
+				{
+					ClusteredMention newCluster = m.markSingleton();
+					mentions.add(newCluster);
+					clusters.put(mentionString,newCluster.entity);
+				}
+			}
+		}
+
+		return mentions;
 	}
 
 }
