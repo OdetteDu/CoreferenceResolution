@@ -34,9 +34,14 @@ public class ClassifierBased implements CoreferenceSystem {
 			 */
 
 			Feature.ExactMatch.class,
-
+//			Feature.DistanceBetweenMention.class,
+//			Feature.DistanceBetweenSentence.class,
+			Feature.HeadWordMatch.class,
+//			Feature.TestPronoun.class,
+			Feature.SamePronoun.class,
 			//skeleton for how to create a pair feature
-			//Pair.make(Feature.IsFeature1.class, Feature.IsFeature2.class),
+			Pair.make(Feature.TestPronoun1.class, Feature.TestPronoun2.class),
+			Pair.make(Feature.PosTag1.class, Feature.PosTag2.class),
 	});
 
 
@@ -60,11 +65,51 @@ public class ClassifierBased implements CoreferenceSystem {
 			if(clazz.equals(Feature.ExactMatch.class)){
 				//(exact string match)
 				return new Feature.ExactMatch(onPrix.gloss().equals(candidate.gloss()));
-//			} else if(clazz.equals(Feature.NewFeature.class) {
-				/*
-				 * TODO: Add features to return for specific classes. Implement calculating values of features here.
-				 */
+			} else if(clazz.equals(Feature.DistanceBetweenMention.class)) {
+				
+				return new Feature.DistanceBetweenMention(Math.abs(onPrix.doc.indexOfMention(onPrix) - onPrix.doc.indexOfMention(candidate)) );
+				
+			} else if(clazz.equals(Feature.DistanceBetweenSentence.class)) {
+				
+				return new Feature.DistanceBetweenSentence(Math.abs(onPrix.doc.indexOfSentence(onPrix.sentence) - onPrix.doc.indexOfSentence(candidate.sentence)) );
+				
+			} else if(clazz.equals(Feature.HeadWordMatch.class)) {
+				
+				return new Feature.HeadWordMatch(onPrix.headWord().equals(candidate.headWord()));
+				
+			} else if(clazz.equals(Feature.TestPronoun1.class)) {
+				
+				return new Feature.TestPronoun1( Pronoun.isSomePronoun(onPrix.gloss()));
+				
+			} else if(clazz.equals(Feature.TestPronoun2.class)) {
+				
+				return new Feature.TestPronoun2(Pronoun.isSomePronoun(candidate.gloss()));
+				
+			} else if(clazz.equals(Feature.SamePronoun.class)) {
+				boolean samePronoun = false;
+				if (Pronoun.isSomePronoun(onPrix.gloss()) && Pronoun.isSomePronoun(candidate.gloss())){
+					Pronoun firstPronoun = Pronoun.getPronoun(onPrix.gloss());
+					Pronoun secondPronoun = Pronoun.getPronoun(candidate.gloss());
+					if (firstPronoun != null && secondPronoun != null){
+						if (firstPronoun.gender.isCompatible(secondPronoun.gender) && firstPronoun.plural == secondPronoun.plural && firstPronoun.speaker.equals(secondPronoun.speaker)){
+							samePronoun = true;
+						}
+					}
+				}
+				
+				return new Feature.SamePronoun(samePronoun);
+				
+			} else if(clazz.equals(Feature.PosTag1.class)) {
+				
+				return new Feature.PosTag1(onPrix.headToken().posTag());
+				
 			}
+			 else if(clazz.equals(Feature.PosTag2.class)) {
+					
+					return new Feature.PosTag2(candidate.headToken().posTag());
+					
+				}
+			
 			else {
 				throw new IllegalArgumentException("Unregistered feature: " + clazz);
 			}

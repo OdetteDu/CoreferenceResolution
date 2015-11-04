@@ -101,6 +101,37 @@ public interface Feature {
     public ExactMatch(boolean exactMatch){ super(exactMatch); }
   }
   
+  public static class HeadWordMatch extends Indicator {
+	    public HeadWordMatch(boolean headWordMatch){ super(headWordMatch); }
+	  }
+  public static class TestPronoun1 extends Indicator {
+	    public TestPronoun1(boolean testPronoun){ super(testPronoun); }
+	  }
+  
+  public static class TestPronoun2 extends Indicator {
+	    public TestPronoun2(boolean testPronoun){ super(testPronoun); }
+	  }
+  
+  public static class PosTag1 extends StringIndicator {
+	    public PosTag1(String posTag){ super(posTag); }
+	  }
+
+public static class PosTag2 extends StringIndicator {
+	    public PosTag2(String posTag){ super(posTag); }
+	  }
+
+  
+  public static class SamePronoun extends Indicator {
+	    public SamePronoun(boolean samePronoun){ super(samePronoun); }
+	  }
+
+
+  public static class DistanceBetweenMention extends IntIndicator {
+	    public DistanceBetweenMention(int distanceBetweenMention){ super(distanceBetweenMention); }
+	  }
+  public static class DistanceBetweenSentence extends IntIndicator {
+	    public DistanceBetweenSentence(int distanceBetweenSentence){ super(distanceBetweenSentence); }
+	  }
   /*
    * TODO: Add values to the indicators here.
    */
