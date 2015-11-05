@@ -120,11 +120,52 @@ public static class PosTag2 extends StringIndicator {
 	    public PosTag2(String posTag){ super(posTag); }
 	  }
 
+public static class NerTag1 extends StringIndicator {
+    public NerTag1(String nerTag){ super(nerTag); }
+  }
+
+public static class NerTag2 extends StringIndicator {
+    public NerTag2(String nerTag){ super(nerTag); }
+  }
+
+public static class Proper1 extends Indicator {
+    public Proper1(boolean speakerTag){ super(speakerTag); }
+  }
+
+public static class Proper2 extends Indicator {
+    public Proper2(boolean speakerTag){ super(speakerTag); }
+  }
+
+public static class Plural1 extends Indicator {
+    public Plural1(boolean speakerTag){ super(speakerTag); }
+  }
+
+public static class Plural2 extends Indicator {
+    public Plural2(boolean speakerTag){ super(speakerTag); }
+  }
+
+public static class Length extends IntIndicator {
+    public Length(int length){ super(length); }
+  }
+
+public static class Common extends IntIndicator {
+    public Common(int length){ super(length); }
+  }
+
+
+
   
   public static class SamePronoun extends Indicator {
 	    public SamePronoun(boolean samePronoun){ super(samePronoun); }
 	  }
 
+  public static class SameNumber extends Indicator {
+	    public SameNumber(boolean sameNumber){ super(sameNumber); }
+	  }
+  
+  public static class SameGender extends Indicator {
+	    public SameGender(boolean sameNumber){ super(sameNumber); }
+	  }
 
   public static class DistanceBetweenMention extends IntIndicator {
 	    public DistanceBetweenMention(int distanceBetweenMention){ super(distanceBetweenMention); }

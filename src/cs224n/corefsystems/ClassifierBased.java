@@ -37,11 +37,17 @@ public class ClassifierBased implements CoreferenceSystem {
 //			Feature.DistanceBetweenMention.class,
 //			Feature.DistanceBetweenSentence.class,
 			Feature.HeadWordMatch.class,
-//			Feature.TestPronoun.class,
 			Feature.SamePronoun.class,
-			//skeleton for how to create a pair feature
-			Pair.make(Feature.TestPronoun1.class, Feature.TestPronoun2.class),
+//			//skeleton for how to create a pair feature
+//			Pair.make(Feature.TestPronoun1.class, Feature.TestPronoun2.class),
 			Pair.make(Feature.PosTag1.class, Feature.PosTag2.class),
+			Feature.SameNumber.class,
+////			Feature.SameGender.class,
+//			Pair.make(Feature.NerTag1.class, Feature.NerTag2.class),
+			Pair.make(Feature.Proper1.class, Feature.Proper2.class),
+			Pair.make(Feature.Plural1.class, Feature.Plural2.class),
+//			Feature.Length.class,
+//			Feature.Common.class,
 	});
 
 
@@ -50,6 +56,37 @@ public class ClassifierBased implements CoreferenceSystem {
 	public ClassifierBased(){
 		StanfordRedwoodConfiguration.setup();
 		RedwoodConfiguration.current().collapseApproximate().apply();
+	}
+	
+	private boolean tryParseFloat(String value) {  
+	     try {  
+	         Float.parseFloat(value);  
+	         return true;  
+	      } catch (NumberFormatException e) {  
+	         return false;  
+	      }  
+	}
+	
+	private boolean isNumber(Mention m){
+		List<String> words = m.text();
+	    for(int i=0; i<words.size()-1; i++){
+	      if (tryParseFloat(words.get(i))){
+	    	  return true;
+	      }
+	    }
+		
+		return false;
+	}
+	
+	private float getNumber(Mention m){
+		List<String> words = m.text();
+	    for(int i=0; i<words.size()-1; i++){
+	      if (tryParseFloat(words.get(i))){
+	    	  return Float.parseFloat(words.get(i));
+	      }
+	    }
+	    return 0;
+	
 	}
 
 	public FeatureExtractor<Pair<Mention,ClusteredMention>,Feature,Boolean> extractor = new FeatureExtractor<Pair<Mention, ClusteredMention>, Feature, Boolean>() {
@@ -71,7 +108,7 @@ public class ClassifierBased implements CoreferenceSystem {
 				
 			} else if(clazz.equals(Feature.DistanceBetweenSentence.class)) {
 				
-				return new Feature.DistanceBetweenSentence(Math.abs(onPrix.doc.indexOfSentence(onPrix.sentence) - onPrix.doc.indexOfSentence(candidate.sentence)) );
+				return new Feature.DistanceBetweenSentence(Math.abs(onPrix.doc.indexOfSentence(onPrix.sentence) - onPrix.doc.indexOfSentence(candidate.sentence) ));
 				
 			} else if(clazz.equals(Feature.HeadWordMatch.class)) {
 				
@@ -80,7 +117,7 @@ public class ClassifierBased implements CoreferenceSystem {
 			} else if(clazz.equals(Feature.TestPronoun1.class)) {
 				
 				return new Feature.TestPronoun1( Pronoun.isSomePronoun(onPrix.gloss()));
-				
+												
 			} else if(clazz.equals(Feature.TestPronoun2.class)) {
 				
 				return new Feature.TestPronoun2(Pronoun.isSomePronoun(candidate.gloss()));
@@ -103,12 +140,55 @@ public class ClassifierBased implements CoreferenceSystem {
 				
 				return new Feature.PosTag1(onPrix.headToken().posTag());
 				
-			}
-			 else if(clazz.equals(Feature.PosTag2.class)) {
+			} else if(clazz.equals(Feature.PosTag2.class)) {
 					
 					return new Feature.PosTag2(candidate.headToken().posTag());
 					
+			}  else if(clazz.equals(Feature.NerTag1.class)) {
+				
+				return new Feature.NerTag1(onPrix.headToken().nerTag());
+				
+			} else if(clazz.equals(Feature.NerTag2.class)) {
+					
+					return new Feature.NerTag2(candidate.headToken().nerTag());
+					
+			} else if(clazz.equals(Feature.Proper1.class)) {
+				
+				return new Feature.Proper1(onPrix.headToken().isProperNoun());
+				
+			} else if(clazz.equals(Feature.Proper2.class)) {
+					
+					return new Feature.Proper2(candidate.headToken().isProperNoun());
+					
+			} else if(clazz.equals(Feature.Plural1.class)) {
+				
+				return new Feature.Plural1(onPrix.headToken().isPluralNoun());
+				
+			} else if(clazz.equals(Feature.Plural2.class)) {
+					
+					return new Feature.Plural2(candidate.headToken().isPluralNoun());
+					
+			} else if(clazz.equals(Feature.SameNumber.class)) {
+				Pair<Boolean, Boolean> sameNumber =  Util.haveNumberAndAreSameNumber(onPrix, candidate);
+				return new Feature.SameNumber(sameNumber.getSecond());
+			} else if(clazz.equals(Feature.SameGender.class)) {
+				Pair<Boolean, Boolean> sameNumber =  Util.haveGenderAndAreSameGender(onPrix, candidate);
+				return new Feature.SameGender(sameNumber.getSecond());
+			} else if(clazz.equals(Feature.Length.class)) {
+				return new Feature.Length(onPrix.length() - candidate.length());
+			} else if(clazz.equals(Feature.Common.class)) {
+				String first = onPrix.headWord();
+				String second = candidate.headWord();
+				int common = 0;
+				int i = 0;
+				while (i < first.length() && i < second.length()){
+					if (first.charAt(i) == second.charAt(i) ){
+						common += 1;
+					}
+					i += 1;
 				}
+				return new Feature.Common(common);
+			}
 			
 			else {
 				throw new IllegalArgumentException("Unregistered feature: " + clazz);
