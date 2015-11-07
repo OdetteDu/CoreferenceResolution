@@ -34,6 +34,7 @@ public class RuleBased implements CoreferenceSystem {
 		exactMatch();
 		headMatch();
 		makeRestSingleton();
+//		System.out.println(doc.prettyPrint(this.discoveredEntities));
 		return mentions;
 	}
 	
@@ -50,30 +51,122 @@ public class RuleBased implements CoreferenceSystem {
 	{
 //		System.out.println(doc.prettyPrint(this.discoveredEntities));
 		List<Mention> tobeRemovedMentions = new ArrayList<Mention>();
-		for (int e : this.entityMap.keySet())
+		List<ClusteredMention> tobeAddedMentions = new ArrayList<ClusteredMention>();
+		for (ClusteredMention cm : this.mentions)
 		{
-			ClusteredMention cm = this.entityMap.get(e);
 			int cmIndex = doc.indexOfMention(cm.mention);
 			String cmHeadWord = cm.mention.headWord();
-			int count = 0;
+			List<String> cmText = cm.mention.text();
 			for (Mention m : unReferencedMentions)
 			{
+				String mHeadWord = m.headWord();
 				if(doc.indexOfMention(m) > cmIndex)
 				{
-					String mHeadWord = m.headWord();
-					if(cmHeadWord.contains(mHeadWord))
+					if(cmHeadWord.equals(mHeadWord))
 					{
-						System.out.println(count);
-						mentions.add(m.markCoreferent(cm));
+						tobeAddedMentions.add(m.markCoreferent(cm));
 					    tobeRemovedMentions.add(m);
 					}
+					else
+					{
+						boolean containsAll = true;
+						for(String s : m.text())
+						{
+							if(!cmText.contains(s))
+							{
+								containsAll = false;
+								break;
+							}
+						}
+						if (containsAll)
+						{
+							tobeAddedMentions.add(m.markCoreferent(cm));
+						    tobeRemovedMentions.add(m);
+						}
+					}
 				}
-				count ++;
 			}
 			this.unReferencedMentions.removeAll(tobeRemovedMentions);
+			tobeRemovedMentions = new ArrayList<Mention>();
 		}
-		
-		
+		this.mentions.addAll(tobeAddedMentions);
+
+		Map<Mention, ClusteredMention> addedMentionMap = new HashMap<Mention, ClusteredMention>();
+		for (Mention cm : this.unReferencedMentions)
+		{
+			if(cm.getCorefferentWith() != null)
+			{
+				continue;
+			}
+			int cmIndex = doc.indexOfMention(cm);
+			String cmHeadWord = cm.headWord();
+			List<String> cmText = cm.text();
+			for (Mention m : unReferencedMentions)
+			{
+				if(cm == m || m.getCorefferentWith() != null)
+				{
+					continue;
+				}
+				String mHeadWord = m.headWord();
+				if(doc.indexOfMention(m) > cmIndex)
+				{
+					if(cmHeadWord.equals(mHeadWord))
+					{
+						if(addedMentionMap.containsKey(cm))
+						{
+							this.mentions.add(m.markCoreferent(addedMentionMap.get(cm)));
+							tobeRemovedMentions.add(m);
+						}
+						else
+						{
+							ClusteredMention newCluster = cm.markSingleton();
+						    this.mentions.add(newCluster);
+						    addedMentionMap.put(cm,newCluster);
+						    this.entityMap.put(newCluster.entity.uniqueID, newCluster);
+						    this.discoveredEntities.add(newCluster.entity);
+						    tobeRemovedMentions.add(cm);
+						    
+						    this.mentions.add(m.markCoreferent(newCluster));
+						    tobeRemovedMentions.add(m);
+						}
+					}
+					else
+					{
+						boolean containsAll = true;
+						for(String s : m.text())
+						{
+							if(!cmText.contains(s))
+							{
+								containsAll = false;
+								break;
+							}
+						}
+						if (containsAll)
+						{
+							if(addedMentionMap.containsKey(cm))
+							{
+								this.mentions.add(m.markCoreferent(addedMentionMap.get(cm)));
+								tobeRemovedMentions.add(m);
+							}
+							else
+							{
+								ClusteredMention newCluster = cm.markSingleton();
+							    this.mentions.add(newCluster);
+							    addedMentionMap.put(cm,newCluster);
+							    this.entityMap.put(newCluster.entity.uniqueID, newCluster);
+							    this.discoveredEntities.add(newCluster.entity);
+							    tobeRemovedMentions.add(cm);
+							    
+							    this.mentions.add(m.markCoreferent(newCluster));
+							    tobeRemovedMentions.add(m);
+							}
+						}
+					}
+				}
+			}
+		}
+		this.unReferencedMentions.removeAll(tobeRemovedMentions);
+		tobeRemovedMentions = new ArrayList<Mention>();
 	}
 	
 	private void exactMatch()
@@ -93,6 +186,7 @@ public class RuleBased implements CoreferenceSystem {
 			    mentions.add(newCluster);
 			    clusters.put(mentionString,newCluster.entity);
 			    this.entityMap.put(newCluster.entity.uniqueID, newCluster);
+			    this.discoveredEntities.add(newCluster.entity);
 			    mentions.add(m.markCoreferent(newCluster));
 			    singleMentions.remove(mentionString);
 			    unReferencedMentions.remove(previousMention);
@@ -102,7 +196,6 @@ public class RuleBased implements CoreferenceSystem {
 				singleMentions.put(mentionString,m);
 			}
 		}
-		System.out.println("Finished exact match!");
 	}
 
 }
