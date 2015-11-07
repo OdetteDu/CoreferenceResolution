@@ -48,7 +48,7 @@ public class RuleBased implements CoreferenceSystem {
 	
 	private void headMatch()
 	{
-		System.out.println(doc.prettyPrint(this.discoveredEntities));
+//		System.out.println(doc.prettyPrint(this.discoveredEntities));
 		List<Mention> tobeRemovedMentions = new ArrayList<Mention>();
 		for (int e : this.entityMap.keySet())
 		{
@@ -58,7 +58,7 @@ public class RuleBased implements CoreferenceSystem {
 			int count = 0;
 			for (Mention m : unReferencedMentions)
 			{
-				if(!Pronoun.isSomePronoun(m.gloss()) && doc.indexOfMention(m) > cmIndex)
+				if(doc.indexOfMention(m) > cmIndex)
 				{
 					String mHeadWord = m.headWord();
 					if(cmHeadWord.contains(mHeadWord))
@@ -99,10 +99,7 @@ public class RuleBased implements CoreferenceSystem {
 			}
 			else {
 				unReferencedMentions.add(m);
-				if (!Pronoun.isSomePronoun(m.gloss()))
-				{
-					singleMentions.put(mentionString,m);
-				}
+				singleMentions.put(mentionString,m);
 			}
 		}
 		System.out.println("Finished exact match!");
