@@ -10,10 +10,9 @@ import cs224n.coref.Pronoun;
 import cs224n.util.Pair;
 
 public class RuleBased implements CoreferenceSystem {
-	
+
 	private Document doc;
 	private List<ClusteredMention> mentions;
-	private Map<Integer, ClusteredMention> entityMap;
 	private Set<Entity> discoveredEntities;
 
 	@Override
@@ -26,27 +25,26 @@ public class RuleBased implements CoreferenceSystem {
 	{
 		this.doc = doc;
 		this.mentions = new ArrayList<ClusteredMention>();
-		this.entityMap = new HashMap<Integer, ClusteredMention>();
 		this.discoveredEntities = new HashSet<Entity>();
-		
+
 		exactMatch();
 		headMatch();
 		makeRestSingleton();
 		return mentions;
 	}
-	
+
 	private void makeRestSingleton()
 	{
 		for (Mention m : this.doc.getMentions())
 		{
 			if(m.getCorefferentWith() == null)
 			{
-			 ClusteredMention newCluster = m.markSingleton();
-		     mentions.add(newCluster);
+				ClusteredMention newCluster = m.markSingleton();
+				mentions.add(newCluster);
 			}
 		}
 	}
-	
+
 	private void headMatch()
 	{
 		for (Mention cm : doc.getMentions())
@@ -70,8 +68,8 @@ public class RuleBased implements CoreferenceSystem {
 						{
 							ClusteredMention newCluster = cm.markSingleton();
 							cmEntity = newCluster.entity;
-						    this.mentions.add(newCluster);
-						    this.discoveredEntities.add(newCluster.entity);
+							this.mentions.add(newCluster);
+							this.discoveredEntities.add(newCluster.entity);
 						}
 						this.mentions.add(m.markCoreferent(cmEntity));
 					}
@@ -93,8 +91,8 @@ public class RuleBased implements CoreferenceSystem {
 							{
 								ClusteredMention newCluster = cm.markSingleton();
 								cmEntity = newCluster.entity;
-							    this.mentions.add(newCluster);
-							    this.discoveredEntities.add(newCluster.entity);
+								this.mentions.add(newCluster);
+								this.discoveredEntities.add(newCluster.entity);
 							}
 							this.mentions.add(m.markCoreferent(cmEntity));
 						}
@@ -103,7 +101,7 @@ public class RuleBased implements CoreferenceSystem {
 			}
 		}
 	}
-	
+
 	private void exactMatch()
 	{
 		Map<String,Entity> clusters = new HashMap<String,Entity>();
@@ -117,12 +115,11 @@ public class RuleBased implements CoreferenceSystem {
 			{
 				Mention previousMention = singleMentions.get(mentionString);
 				ClusteredMention newCluster = previousMention.markSingleton();
-			    mentions.add(newCluster);
-			    clusters.put(mentionString,newCluster.entity);
-			    this.entityMap.put(newCluster.entity.uniqueID, newCluster);
-			    this.discoveredEntities.add(newCluster.entity);
-			    mentions.add(m.markCoreferent(newCluster));
-			    singleMentions.remove(mentionString);
+				mentions.add(newCluster);
+				clusters.put(mentionString,newCluster.entity);
+				this.discoveredEntities.add(newCluster.entity);
+				mentions.add(m.markCoreferent(newCluster));
+				singleMentions.remove(mentionString);
 			}
 			else {
 				singleMentions.put(mentionString,m);
