@@ -6,7 +6,10 @@ import cs224n.coref.ClusteredMention;
 import cs224n.coref.Document;
 import cs224n.coref.Entity;
 import cs224n.coref.Mention;
+import cs224n.coref.Name;
 import cs224n.coref.Pronoun;
+import cs224n.coref.Sentence;
+import cs224n.coref.Util;
 import cs224n.util.Pair;
 
 public class RuleBased implements CoreferenceSystem {
@@ -30,11 +33,86 @@ public class RuleBased implements CoreferenceSystem {
 		exactMatch();
 		headMatch();
 		makeRestSingleton();
+		handlePronoun();
 		return mentions;
 	}
 
 	private void makeRestSingleton()
 	{
+		for (Mention m : this.doc.getMentions())
+		{
+			if(!Pronoun.isSomePronoun(m.gloss()) && m.getCorefferentWith() == null)
+			{
+				ClusteredMention newCluster = m.markSingleton();
+				mentions.add(newCluster);
+			}
+		}
+	}
+	
+	private void handlePronoun()
+	{
+		Map<Integer, List<Mention>> nonPronounMap = new HashMap<Integer, List<Mention>>();
+		
+		for (Mention m : this.doc.getMentions())
+		{
+			if (!Pronoun.isSomePronoun(m.gloss()))
+			{
+				int sentenceIndex = this.doc.indexOfSentence(m.sentence);
+				List<Mention> nonPronouns;
+				if(!nonPronounMap.containsKey(sentenceIndex))
+				{
+					nonPronouns = new ArrayList<Mention>();
+					nonPronounMap.put(sentenceIndex, nonPronouns);
+				}
+				else
+				{
+					nonPronouns = nonPronounMap.get(sentenceIndex);
+				}
+				nonPronouns.add(m);
+			}
+		}
+		
+		//Start process pronoun
+		for (Mention m : this.doc.getMentions())
+		{
+			if (Pronoun.isSomePronoun(m.gloss()))
+			{
+				int sentenceIndex = this.doc.indexOfSentence(m.sentence);
+				for(int i = sentenceIndex - 3; i<=sentenceIndex; i++) //TODO: Test if we do it backwards, will it perform better?
+				{
+					if(m.getCorefferentWith() == null && nonPronounMap.containsKey(i))
+					{
+						for(Mention nonPronounMention : nonPronounMap.get(i))
+						{
+							System.out.println(nonPronounMention+", "+m);
+							Sentence.Token token = nonPronounMention.headToken();
+							boolean isNoun = token.isNoun();
+							boolean isPluralNoun = token.isPluralNoun();
+							boolean isProperNoun = token.isProperNoun();
+							boolean isQuoted = token.isQuoted();
+							String lemma = token.lemma();
+							String nerTag = token.nerTag();
+							String posTag = token.posTag();
+							String speaker = token.speaker();
+							String word = token.word();
+							//Check if m agree with nonPronounMention
+							if(Name.isName(nonPronounMention.gloss()))
+							{
+								System.out.println("Name");
+								System.out.println(Util.haveGenderAndAreSameGender(nonPronounMention, m));
+								System.out.println(Util.haveNumberAndAreSameNumber(nonPronounMention, m));
+							}
+							else
+							{
+								System.out.println("Not name");
+							}
+						}
+					}
+				}
+			}
+		}
+		
+		//TODO Need to be removed!
 		for (Mention m : this.doc.getMentions())
 		{
 			if(m.getCorefferentWith() == null)
