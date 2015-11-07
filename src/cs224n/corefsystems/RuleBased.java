@@ -49,56 +49,60 @@ public class RuleBased implements CoreferenceSystem {
 	{
 		for (Mention cm : doc.getMentions())
 		{
-			int cmIndex = doc.indexOfMention(cm);
-			String cmHeadWord = cm.headWord();
-			List<String> cmText = cm.text();
-			for (Mention m : doc.getMentions())
+			if (!Pronoun.isSomePronoun(cm.gloss()))
 			{
-				if(cm == m || m.getCorefferentWith() != null)
+				int cmIndex = doc.indexOfMention(cm);
+				String cmHeadWord = cm.headWord();
+				List<String> cmText = cm.text();
+				for (Mention m : doc.getMentions())
 				{
-					continue;
-				}
-				String mHeadWord = m.headWord();
-				if(doc.indexOfMention(m) > cmIndex)
-				{
-					if(cmHeadWord.equals(mHeadWord))
+					if(cm != m && m.getCorefferentWith() == null && !Pronoun.isSomePronoun(m.gloss()))
 					{
-						Entity cmEntity = cm.getCorefferentWith();
-						if(cmEntity == null)
+						String mHeadWord = m.headWord();
+						if(doc.indexOfMention(m) > cmIndex)
 						{
-							ClusteredMention newCluster = cm.markSingleton();
-							cmEntity = newCluster.entity;
-							this.mentions.add(newCluster);
-							this.discoveredEntities.add(newCluster.entity);
-						}
-						this.mentions.add(m.markCoreferent(cmEntity));
-					}
-					else
-					{
-						boolean containsAll = true;
-						for(String s : m.text())
-						{
-							if(!cmText.contains(s))
+							if(cmHeadWord.equals(mHeadWord))
 							{
-								containsAll = false;
-								break;
+								Entity cmEntity = cm.getCorefferentWith();
+								if(cmEntity == null)
+								{
+									ClusteredMention newCluster = cm.markSingleton();
+									cmEntity = newCluster.entity;
+									this.mentions.add(newCluster);
+									this.discoveredEntities.add(newCluster.entity);
+								}
+								this.mentions.add(m.markCoreferent(cmEntity));
+							}
+							else
+							{
+								boolean containsAll = true;
+								for(String s : m.text())
+								{
+									if(!cmText.contains(s))
+									{
+										containsAll = false;
+										break;
+									}
+								}
+								if (containsAll)
+								{
+									Entity cmEntity = cm.getCorefferentWith();
+									if(cmEntity == null)
+									{
+										ClusteredMention newCluster = cm.markSingleton();
+										cmEntity = newCluster.entity;
+										this.mentions.add(newCluster);
+										this.discoveredEntities.add(newCluster.entity);
+									}
+									this.mentions.add(m.markCoreferent(cmEntity));
+								}
 							}
 						}
-						if (containsAll)
-						{
-							Entity cmEntity = cm.getCorefferentWith();
-							if(cmEntity == null)
-							{
-								ClusteredMention newCluster = cm.markSingleton();
-								cmEntity = newCluster.entity;
-								this.mentions.add(newCluster);
-								this.discoveredEntities.add(newCluster.entity);
-							}
-							this.mentions.add(m.markCoreferent(cmEntity));
-						}
 					}
+
 				}
 			}
+
 		}
 	}
 
@@ -122,7 +126,10 @@ public class RuleBased implements CoreferenceSystem {
 				singleMentions.remove(mentionString);
 			}
 			else {
-				singleMentions.put(mentionString,m);
+				if(!Pronoun.isSomePronoun(m.gloss()))
+				{
+					singleMentions.put(mentionString,m);
+				}
 			}
 		}
 	}
