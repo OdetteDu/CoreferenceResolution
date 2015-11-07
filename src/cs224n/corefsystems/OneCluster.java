@@ -2,6 +2,7 @@ package cs224n.corefsystems;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.ArrayList;
 
 import cs224n.coref.ClusteredMention;
 import cs224n.coref.Document;
@@ -18,8 +19,8 @@ public class OneCluster implements CoreferenceSystem {
 
 	@Override
 	public List<ClusteredMention> runCoreference(Document doc) {
-		// TODO Auto-generated method stub
-		return null;
+		List<ClusteredMention> result = new ArrayList<ClusteredMention>();
+		return result;
 	}
 
 }

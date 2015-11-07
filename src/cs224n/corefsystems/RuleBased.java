@@ -12,13 +12,12 @@ public class RuleBased implements CoreferenceSystem {
 
 	@Override
 	public void train(Collection<Pair<Document, List<Entity>>> trainingData) {
-		// TODO Auto-generated method stub
 
 	}
 
 	@Override
 	public List<ClusteredMention> runCoreference(Document doc) {
-		// TODO Auto-generated method stub
+		
 		return null;
 	}
 
