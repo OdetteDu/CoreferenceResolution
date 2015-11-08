@@ -90,6 +90,7 @@ public class RuleBased implements CoreferenceSystem {
 
 		exactMatch();
 		relaxedStringMatch();
+		predicateNominative();
 		strictHeadMatch();
 		variantHeadMatch();
 		properHeadMatch();
@@ -159,6 +160,144 @@ public class RuleBased implements CoreferenceSystem {
 		}
 	}
 
+	private void relaxedStringMatch()
+	{
+		for (Mention cm : doc.getMentions())
+		{
+			if (!Pronoun.isSomePronoun(cm.gloss()))
+			{
+				List<String> cmWords = cm.sentence.words;
+				String cmDroppedString = "";
+				for(int i=cm.beginIndexInclusive; i<=cm.headWordIndex; i++)
+				{
+					cmDroppedString += cmWords.get(i) + " ";
+				}
+
+				//				System.out.println("Mention: "+cm.gloss()+" Head: "+cm.headWord());
+				//				System.out.println("Dropped: "+droppedString);
+				//				System.out.println(cm.beginIndexInclusive+", "+cm.headWordIndex+", "+cm.endIndexExclusive);
+				//				System.out.println(cm.sentence.toString());
+				for (Mention m : doc.getMentions())
+				{
+					if(cm != m && m.getCorefferentWith() == null && !Pronoun.isSomePronoun(m.gloss()))
+					{
+						List<String> mWords = m.sentence.words;
+						String mDroppedString = "";
+						for(int i=m.beginIndexInclusive; i<=m.headWordIndex; i++)
+						{
+							mDroppedString += mWords.get(i) + " ";
+						}
+
+						if(cmDroppedString.equals(mDroppedString))
+						{
+							Entity cmEntity = cm.getCorefferentWith();
+							if(cmEntity == null)
+							{
+								ClusteredMention newCluster = cm.markSingleton();
+								cmEntity = newCluster.entity;
+								this.mentions.add(newCluster);
+								this.discoveredEntities.add(newCluster.entity);
+							}
+							this.mentions.add(m.markCoreferent(cmEntity));
+						}
+					}
+
+				}
+			}
+
+		}
+	}
+
+	private void predicateNominative()
+	{
+		List<Mention> mentionList = doc.getMentions();
+		Iterator<Mention> iterMention = mentionList.iterator();
+		Mention first = null;
+		Mention second = null;
+		if(iterMention.hasNext())
+		{
+			first = iterMention.next();
+		}
+		if(iterMention.hasNext())
+		{
+			second = iterMention.next();
+		}
+		while(iterMention.hasNext())
+		{
+			if(second.getCorefferentWith() == null && doc.indexOfSentence(first.sentence) == doc.indexOfSentence(second.sentence))
+			{
+				List<String> words = first.sentence.words;
+				String middleString = "";
+				for(int i = first.endIndexExclusive+1; i<second.beginIndexInclusive; i++)
+				{
+					middleString += words.get(i)+ " ";
+				}
+				
+				if(middleString.trim().equals("is"))
+				{
+					System.out.println("Success: "+middleString.trim());
+					Entity cmEntity = first.getCorefferentWith();
+					if(cmEntity == null)
+					{
+						ClusteredMention newCluster = first.markSingleton();
+						cmEntity = newCluster.entity;
+						this.mentions.add(newCluster);
+						this.discoveredEntities.add(newCluster.entity);
+					}
+					this.mentions.add(second.markCoreferent(cmEntity));
+					break;
+				}
+			}
+			first = second;
+			second = iterMention.next();
+		}
+	}
+	
+	private void roleAppositive()
+	{
+		List<Mention> mentionList = doc.getMentions();
+		Iterator<Mention> iterMention = mentionList.iterator();
+		Mention first = null;
+		Mention second = null;
+		if(iterMention.hasNext())
+		{
+			first = iterMention.next();
+		}
+		if(iterMention.hasNext())
+		{
+			second = iterMention.next();
+		}
+		while(iterMention.hasNext())
+		{
+			if(second.getCorefferentWith() == null && doc.indexOfSentence(first.sentence) == doc.indexOfSentence(second.sentence))
+			{
+				List<String> words = first.sentence.words;
+				String middleString = "";
+				for(int i = first.endIndexExclusive+1; i<second.beginIndexInclusive; i++)
+				{
+					middleString += words.get(i)+ " ";
+				}
+				
+				if(middleString.trim().equals("is"))
+				{
+					System.out.println("Success: "+middleString.trim());
+					Entity cmEntity = first.getCorefferentWith();
+					if(cmEntity == null)
+					{
+						ClusteredMention newCluster = first.markSingleton();
+						cmEntity = newCluster.entity;
+						this.mentions.add(newCluster);
+						this.discoveredEntities.add(newCluster.entity);
+					}
+					this.mentions.add(second.markCoreferent(cmEntity));
+					break;
+				}
+			}
+			first = second;
+			second = iterMention.next();
+		}
+	}
+
 	private void strictHeadMatch()
 	{
 		for (Mention cm : doc.getMentions())
@@ -196,54 +335,6 @@ public class RuleBased implements CoreferenceSystem {
 								}
 								this.mentions.add(m.markCoreferent(cmEntity));
 							}
-						}
-					}
-
-				}
-			}
-
-		}
-	}
-
-	private void relaxedStringMatch()
-	{
-		for (Mention cm : doc.getMentions())
-		{
-			if (!Pronoun.isSomePronoun(cm.gloss()))
-			{
-				List<String> cmWords = cm.sentence.words;
-				String cmDroppedString = "";
-				for(int i=cm.beginIndexInclusive; i<=cm.headWordIndex; i++)
-				{
-					cmDroppedString += cmWords.get(i) + " ";
-				}
-				
-//				System.out.println("Mention: "+cm.gloss()+" Head: "+cm.headWord());
-//				System.out.println("Dropped: "+droppedString);
-//				System.out.println(cm.beginIndexInclusive+", "+cm.headWordIndex+", "+cm.endIndexExclusive);
-//				System.out.println(cm.sentence.toString());
-				for (Mention m : doc.getMentions())
-				{
-					if(cm != m && m.getCorefferentWith() == null && !Pronoun.isSomePronoun(m.gloss()))
-					{
-						List<String> mWords = m.sentence.words;
-						String mDroppedString = "";
-						for(int i=m.beginIndexInclusive; i<=m.headWordIndex; i++)
-						{
-							mDroppedString += mWords.get(i) + " ";
-						}
-						
-						if(cmDroppedString.equals(mDroppedString))
-						{
-							Entity cmEntity = cm.getCorefferentWith();
-							if(cmEntity == null)
-							{
-								ClusteredMention newCluster = cm.markSingleton();
-								cmEntity = newCluster.entity;
-								this.mentions.add(newCluster);
-								this.discoveredEntities.add(newCluster.entity);
-							}
-							this.mentions.add(m.markCoreferent(cmEntity));
 						}
 					}
 
@@ -416,7 +507,7 @@ public class RuleBased implements CoreferenceSystem {
 		//Start process pronoun
 		for (Mention m : this.doc.getMentions())
 		{
-			if (Pronoun.isSomePronoun(m.gloss()))
+			if (m.getCorefferentWith() == null && Pronoun.isSomePronoun(m.gloss()))
 			{
 				for(Mention nonPronounMention : nonPronouns)
 				{
