@@ -90,6 +90,8 @@ public class RuleBased implements CoreferenceSystem {
 
 		exactMatch();
 		strictHeadMatch();
+		variantHeadMatch();
+		properHeadMatch();
 		trainedHeadMatch();
 		flexHeadMatch();
 		makeRestSingleton();
@@ -184,8 +186,6 @@ public class RuleBased implements CoreferenceSystem {
 			}
 		}
 
-		//		this.pronounExactMatch();
-		//		System.out.println(this.doc.prettyPrint(discoveredEntities));
 		for (Mention m : this.doc.getMentions())
 		{
 			Entity[] singleEntities = new Entity[4];
@@ -297,7 +297,52 @@ public class RuleBased implements CoreferenceSystem {
 						String mHeadWord = m.headWord();
 						if(doc.indexOfMention(m) > cmIndex)
 						{
-							if(cmHeadWord.equals(mHeadWord))
+							boolean containsAll = true;
+							for(String s : m.text())
+							{
+								if(!cmText.contains(s))
+								{
+									containsAll = false;
+									break;
+								}
+							}
+							if(cmHeadWord.contains(mHeadWord) && containsAll)
+							{
+								Entity cmEntity = cm.getCorefferentWith();
+								if(cmEntity == null)
+								{
+									ClusteredMention newCluster = cm.markSingleton();
+									cmEntity = newCluster.entity;
+									this.mentions.add(newCluster);
+									this.discoveredEntities.add(newCluster.entity);
+								}
+								this.mentions.add(m.markCoreferent(cmEntity));
+							}
+						}
+					}
+
+				}
+			}
+
+		}
+	}
+	
+	private void variantHeadMatch()
+	{
+		for (Mention cm : doc.getMentions())
+		{
+			if (!Pronoun.isSomePronoun(cm.gloss()))
+			{
+				int cmIndex = doc.indexOfMention(cm);
+				String cmHeadWord = cm.headWord();
+				for (Mention m : doc.getMentions())
+				{
+					if(cm != m && m.getCorefferentWith() == null && !Pronoun.isSomePronoun(m.gloss()))
+					{
+						String mHeadWord = m.headWord();
+						if(doc.indexOfMention(m) > cmIndex)
+						{
+							if(cmHeadWord.contains(mHeadWord))
 							{
 								Entity cmEntity = cm.getCorefferentWith();
 								if(cmEntity == null)
@@ -318,6 +363,70 @@ public class RuleBased implements CoreferenceSystem {
 		}
 	}
 
+	private void trainedHeadMatch() {
+		for (Mention cm : doc.getMentions())
+		{
+			if (!Pronoun.isSomePronoun(cm.gloss()))
+			{
+				String cmHeadWord = cm.headWord();
+				for (Mention m : doc.getMentions())
+				{
+					if(cm != m && m.getCorefferentWith() == null && !Pronoun.isSomePronoun(m.gloss()))
+					{
+						String headWord = m.headWord();
+						if(this.headWordMap.containsKey(headWord) && headWordMap.get(headWord).contains(cmHeadWord) && doc.indexOfMention(m) > doc.indexOfMention(cm))
+						{
+
+							Entity cmEntity = cm.getCorefferentWith();
+							if(cmEntity == null)
+							{
+								ClusteredMention newCluster = cm.markSingleton();
+								cmEntity = newCluster.entity;
+								this.mentions.add(newCluster);
+								this.discoveredEntities.add(newCluster.entity);
+							}
+							this.mentions.add(m.markCoreferent(cmEntity));
+						}
+					}
+				}
+			}
+		}
+	}
+
+	private void properHeadMatch()
+	{
+		for (Mention cm : doc.getMentions())
+		{
+			if (!Pronoun.isSomePronoun(cm.gloss()))
+			{
+				String cmHeadWord = cm.headWord();
+				int cmIndex = doc.indexOfMention(cm);
+				for (Mention m : doc.getMentions())
+				{
+					if(cm != m && m.getCorefferentWith() == null && !Pronoun.isSomePronoun(m.gloss()))
+					{
+						String mHeadWord = m.headWord();
+						if(doc.indexOfMention(m) > cmIndex && cmHeadWord.contains(mHeadWord) && cm.headToken().nerTag().equals(m.headToken().nerTag()) && cm.headToken().isPluralNoun() == m.headToken().isPluralNoun())
+						{
+							Entity cmEntity = cm.getCorefferentWith();
+							if(cmEntity == null)
+							{
+								ClusteredMention newCluster = cm.markSingleton();
+								cmEntity = newCluster.entity;
+								this.mentions.add(newCluster);
+								this.discoveredEntities.add(newCluster.entity);
+							}
+							this.mentions.add(m.markCoreferent(cmEntity));
+
+						}
+					}
+
+				}
+			}
+
+		}
+	}
+
 	private void flexHeadMatch()
 	{
 		for (Mention cm : doc.getMentions())
@@ -325,8 +434,6 @@ public class RuleBased implements CoreferenceSystem {
 			if (!Pronoun.isSomePronoun(cm.gloss()))
 			{
 				int cmIndex = doc.indexOfMention(cm);
-				String cmHeadWord = cm.headWord();
-				List<String> cmText = cm.text();
 				for (Mention m : doc.getMentions())
 				{
 					if(cm != m && m.getCorefferentWith() == null && !Pronoun.isSomePronoun(m.gloss()))
@@ -334,17 +441,7 @@ public class RuleBased implements CoreferenceSystem {
 						String mHeadWord = m.headWord();
 						if(doc.indexOfMention(m) > cmIndex)
 						{
-
-							boolean containsAll = true;
-							for(String s : m.text())
-							{
-								if(!cmText.contains(s))
-								{
-									containsAll = false;
-									break;
-								}
-							}
-							if (containsAll)
+							if(cm.gloss().contains(mHeadWord) && Name.isName(cm.gloss()) && Name.isName(m.gloss()) && cm.headToken().nerTag() == m.headToken().nerTag())
 							{
 								Entity cmEntity = cm.getCorefferentWith();
 								if(cmEntity == null)
@@ -389,39 +486,6 @@ public class RuleBased implements CoreferenceSystem {
 				if(!Pronoun.isSomePronoun(m.gloss()))
 				{
 					singleMentions.put(mentionString,m);
-				}
-			}
-		}
-	}
-
-	private void trainedHeadMatch() {
-		for (Mention cm : doc.getMentions())
-		{
-			if (!Pronoun.isSomePronoun(cm.gloss()))
-			{
-				String cmHeadWord = cm.headWord();
-				for (Mention m : doc.getMentions())
-				{
-					if(cm != m && m.getCorefferentWith() == null && !Pronoun.isSomePronoun(m.gloss()))
-					{
-						String headWord = m.headWord();
-						if(this.headWordMap.containsKey(headWord))
-						{
-							if(headWordMap.get(headWord).contains(cmHeadWord))
-							{
-								Entity cmEntity = cm.getCorefferentWith();
-								if(cmEntity == null)
-								{
-									ClusteredMention newCluster = cm.markSingleton();
-									cmEntity = newCluster.entity;
-									this.mentions.add(newCluster);
-									this.discoveredEntities.add(newCluster.entity);
-								}
-								this.mentions.add(m.markCoreferent(cmEntity));
-							}
-						}
-
-					}
 				}
 			}
 		}
