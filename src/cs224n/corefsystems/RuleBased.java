@@ -98,184 +98,61 @@ public class RuleBased implements CoreferenceSystem {
 		handlePronoun();
 		return mentions;
 	}
-
-	private void makeRestSingleton()
+	
+	private void exactMatch()
 	{
-		for (Mention m : this.doc.getMentions())
-		{
-			if(!Pronoun.isSomePronoun(m.gloss()) && m.getCorefferentWith() == null)
+		Map<String,Entity> clusters = new HashMap<String,Entity>();
+		Map<String,Mention> singleMentions = new HashMap<String, Mention>();
+		for(Mention m : doc.getMentions()){
+			String mentionString = m.gloss();
+			if(clusters.containsKey(mentionString)){
+				mentions.add(m.markCoreferent(clusters.get(mentionString)));
+			} 
+			else if(singleMentions.containsKey(mentionString))
 			{
-				ClusteredMention newCluster = m.markSingleton();
+				Mention previousMention = singleMentions.get(mentionString);
+				ClusteredMention newCluster = previousMention.markSingleton();
 				mentions.add(newCluster);
+				clusters.put(mentionString,newCluster.entity);
+				this.discoveredEntities.add(newCluster.entity);
+				mentions.add(m.markCoreferent(newCluster));
+				singleMentions.remove(mentionString);
+			}
+			else {
+				if(!Pronoun.isSomePronoun(m.gloss()))
+				{
+					singleMentions.put(mentionString,m);
+				}
 			}
 		}
 	}
 
-	private void handlePronoun()
+	private void pronounExactMatch()
 	{
-		List<Mention> nonPronouns = new ArrayList<Mention>();
-
-		for (Mention m : this.doc.getMentions())
-		{
-			if (!Pronoun.isSomePronoun(m.gloss()))
-			{
-				nonPronouns.add(m);
-			}
-		}
-
-		//Start process pronoun
-		for (Mention m : this.doc.getMentions())
-		{
-			if (Pronoun.isSomePronoun(m.gloss()))
-			{
-				for(Mention nonPronounMention : nonPronouns)
-				{
-					//							System.out.println(nonPronounMention+", "+m);
-					Pronoun pronoun = Pronoun.getPronoun(m.headWord());
-					if(pronoun == null)
-					{
-						//TODO, if pronoun = one, it is null, need to handle this case
-						System.out.println(m+", "+m.headWord());
-						break;
-					}
-					Sentence.Token token = nonPronounMention.headToken();
-					String nerTag = token.nerTag();
-					if (nerTag.equals("PERSON"))
-					{
-						// Person
-						Pair<Boolean, Boolean> haveNumberAndSameNumber = Util.haveNumberAndAreSameNumber(nonPronounMention, m);
-						if(haveNumberAndSameNumber.getFirst() && haveNumberAndSameNumber.getSecond())
-						{
-							Pair<Boolean, Boolean> haveGenderAndSameGender = Util.haveGenderAndAreSameGender(nonPronounMention, m);
-							if((haveGenderAndSameGender.getFirst() && haveGenderAndSameGender.getSecond()))
-							{
-								this.mentions.add(m.markCoreferent(nonPronounMention.getCorefferentWith()));
-								break;
-							}
-							else if(pronoun.gender != Gender.NEUTRAL)
-							{
-								this.mentions.add(m.markCoreferent(nonPronounMention.getCorefferentWith()));
-								break;
-							}
-							else
-							{
-								//										System.out.println("Not have gender: "+nonPronounMention.gloss() + ": "+pronoun);
-							}
-						}
-						else
-						{
-							//									System.out.println("Plural: "+pronoun+": "+pronoun.plural);
-							//									System.out.println("Plural: "+nonPronounMention+": "+token.isPluralNoun());
-						}
-
-					}
-					else
-					{
-						// Not Person
-						if(token.isPluralNoun() == pronoun.plural)
-						{
-							this.mentions.add(m.markCoreferent(nonPronounMention.getCorefferentWith()));
-							break;
-						}
-						else
-						{
-							//TODO
-						}
-					}
-				}
-			}
-		}
-
-		for (Mention m : this.doc.getMentions())
-		{
-			Entity[] singleEntities = new Entity[4];
-			Entity[] doubleEntities = new Entity[3];
+		Map<String,Entity> clusters = new HashMap<String,Entity>();
+		Map<String,Mention> singleMentions = new HashMap<String, Mention>();
+		for(Mention m : doc.getMentions()){
 			if(m.getCorefferentWith() == null)
 			{
-				Pronoun pronoun = Pronoun.getPronoun(m.headWord());
-				if(pronoun == null)
+				String mentionString = m.gloss();
+				if(clusters.containsKey(mentionString)){
+					mentions.add(m.markCoreferent(clusters.get(mentionString)));
+				} 
+				else if(singleMentions.containsKey(mentionString))
 				{
-					if(singleEntities[3] == null)
-					{
-						ClusteredMention newCluster = m.markSingleton();
-						mentions.add(newCluster);
-						singleEntities[3] = newCluster.entity;
-					}
-					else
-					{
-						this.mentions.add(m.markCoreferent(singleEntities[3]));
-					}
+					Mention previousMention = singleMentions.get(mentionString);
+					ClusteredMention newCluster = previousMention.markSingleton();
+					mentions.add(newCluster);
+					clusters.put(mentionString,newCluster.entity);
+					this.discoveredEntities.add(newCluster.entity);
+					mentions.add(m.markCoreferent(newCluster));
+					singleMentions.remove(mentionString);
 				}
-				else
-				{
-					if(pronoun.plural)
+				else {
+					if(Pronoun.isSomePronoun(m.gloss()))
 					{
-						int index;
-						if(pronoun.speaker == Speaker.FIRST_PERSON)
-						{
-							index = 0;
-						}
-						else if(pronoun.speaker == Speaker.SECOND_PERSON)
-						{
-							index = 1;
-						}
-						else
-						{
-							index = 2;
-						}
-
-						if(doubleEntities[index] == null)
-						{
-							ClusteredMention newCluster = m.markSingleton();
-							mentions.add(newCluster);
-							doubleEntities[index] = newCluster.entity;
-						}
-						else
-						{
-							this.mentions.add(m.markCoreferent(doubleEntities[index]));
-						}
+						singleMentions.put(mentionString,m);
 					}
-					else
-					{
-						int index;
-						if(pronoun.speaker == Speaker.FIRST_PERSON)
-						{
-							index = 0;
-						}
-						else if(pronoun.speaker == Speaker.SECOND_PERSON)
-						{
-							index = 1;
-						}
-						else
-						{
-							index = 2;
-						}
-
-						if(singleEntities[index] == null)
-						{
-							ClusteredMention newCluster = m.markSingleton();
-							mentions.add(newCluster);
-							singleEntities[index] = newCluster.entity;
-						}
-						else
-						{
-							this.mentions.add(m.markCoreferent(singleEntities[index]));
-						}
-					}
-				}
-			}
-		}
-
-		for (Mention m:doc.getMentions())
-		{
-			if(m.getCorefferentWith() == null)
-			{
-				ClusteredMention newCluster = m.markSingleton();
-				mentions.add(newCluster);
-				System.out.println("A Pronoun that no one wants it: "+m.gloss());
-				for(Mention mm : nonPronouns)
-				{
-					System.out.println(mm.gloss()+", "+mm.headToken().isPluralNoun());
 				}
 			}
 		}
@@ -462,61 +339,184 @@ public class RuleBased implements CoreferenceSystem {
 
 		}
 	}
-
-	private void exactMatch()
+	
+	private void makeRestSingleton()
 	{
-		Map<String,Entity> clusters = new HashMap<String,Entity>();
-		Map<String,Mention> singleMentions = new HashMap<String, Mention>();
-		for(Mention m : doc.getMentions()){
-			String mentionString = m.gloss();
-			if(clusters.containsKey(mentionString)){
-				mentions.add(m.markCoreferent(clusters.get(mentionString)));
-			} 
-			else if(singleMentions.containsKey(mentionString))
+		for (Mention m : this.doc.getMentions())
+		{
+			if(!Pronoun.isSomePronoun(m.gloss()) && m.getCorefferentWith() == null)
 			{
-				Mention previousMention = singleMentions.get(mentionString);
-				ClusteredMention newCluster = previousMention.markSingleton();
+				ClusteredMention newCluster = m.markSingleton();
 				mentions.add(newCluster);
-				clusters.put(mentionString,newCluster.entity);
-				this.discoveredEntities.add(newCluster.entity);
-				mentions.add(m.markCoreferent(newCluster));
-				singleMentions.remove(mentionString);
-			}
-			else {
-				if(!Pronoun.isSomePronoun(m.gloss()))
-				{
-					singleMentions.put(mentionString,m);
-				}
 			}
 		}
 	}
 
-	private void pronounExactMatch()
+	private void handlePronoun()
 	{
-		Map<String,Entity> clusters = new HashMap<String,Entity>();
-		Map<String,Mention> singleMentions = new HashMap<String, Mention>();
-		for(Mention m : doc.getMentions()){
+		List<Mention> nonPronouns = new ArrayList<Mention>();
+
+		for (Mention m : this.doc.getMentions())
+		{
+			if (!Pronoun.isSomePronoun(m.gloss()))
+			{
+				nonPronouns.add(m);
+			}
+		}
+
+		//Start process pronoun
+		for (Mention m : this.doc.getMentions())
+		{
+			if (Pronoun.isSomePronoun(m.gloss()))
+			{
+				for(Mention nonPronounMention : nonPronouns)
+				{
+					//							System.out.println(nonPronounMention+", "+m);
+					Pronoun pronoun = Pronoun.getPronoun(m.headWord());
+					if(pronoun == null)
+					{
+						//TODO, if pronoun = one, it is null, need to handle this case
+						System.out.println(m+", "+m.headWord());
+						break;
+					}
+					Sentence.Token token = nonPronounMention.headToken();
+					String nerTag = token.nerTag();
+					if (nerTag.equals("PERSON"))
+					{
+						// Person
+						Pair<Boolean, Boolean> haveNumberAndSameNumber = Util.haveNumberAndAreSameNumber(nonPronounMention, m);
+						if(haveNumberAndSameNumber.getFirst() && haveNumberAndSameNumber.getSecond())
+						{
+							Pair<Boolean, Boolean> haveGenderAndSameGender = Util.haveGenderAndAreSameGender(nonPronounMention, m);
+							if((haveGenderAndSameGender.getFirst() && haveGenderAndSameGender.getSecond()))
+							{
+								this.mentions.add(m.markCoreferent(nonPronounMention.getCorefferentWith()));
+								break;
+							}
+							else if(pronoun.gender != Gender.NEUTRAL)
+							{
+								this.mentions.add(m.markCoreferent(nonPronounMention.getCorefferentWith()));
+								break;
+							}
+							else
+							{
+								//										System.out.println("Not have gender: "+nonPronounMention.gloss() + ": "+pronoun);
+							}
+						}
+						else
+						{
+							//									System.out.println("Plural: "+pronoun+": "+pronoun.plural);
+							//									System.out.println("Plural: "+nonPronounMention+": "+token.isPluralNoun());
+						}
+
+					}
+					else
+					{
+						// Not Person
+						if(token.isPluralNoun() == pronoun.plural)
+						{
+							this.mentions.add(m.markCoreferent(nonPronounMention.getCorefferentWith()));
+							break;
+						}
+						else
+						{
+							//TODO
+						}
+					}
+				}
+			}
+		}
+
+		for (Mention m : this.doc.getMentions())
+		{
+			Entity[] singleEntities = new Entity[4];
+			Entity[] doubleEntities = new Entity[3];
 			if(m.getCorefferentWith() == null)
 			{
-				String mentionString = m.gloss();
-				if(clusters.containsKey(mentionString)){
-					mentions.add(m.markCoreferent(clusters.get(mentionString)));
-				} 
-				else if(singleMentions.containsKey(mentionString))
+				Pronoun pronoun = Pronoun.getPronoun(m.headWord());
+				if(pronoun == null)
 				{
-					Mention previousMention = singleMentions.get(mentionString);
-					ClusteredMention newCluster = previousMention.markSingleton();
-					mentions.add(newCluster);
-					clusters.put(mentionString,newCluster.entity);
-					this.discoveredEntities.add(newCluster.entity);
-					mentions.add(m.markCoreferent(newCluster));
-					singleMentions.remove(mentionString);
-				}
-				else {
-					if(Pronoun.isSomePronoun(m.gloss()))
+					if(singleEntities[3] == null)
 					{
-						singleMentions.put(mentionString,m);
+						ClusteredMention newCluster = m.markSingleton();
+						mentions.add(newCluster);
+						singleEntities[3] = newCluster.entity;
 					}
+					else
+					{
+						this.mentions.add(m.markCoreferent(singleEntities[3]));
+					}
+				}
+				else
+				{
+					if(pronoun.plural)
+					{
+						int index;
+						if(pronoun.speaker == Speaker.FIRST_PERSON)
+						{
+							index = 0;
+						}
+						else if(pronoun.speaker == Speaker.SECOND_PERSON)
+						{
+							index = 1;
+						}
+						else
+						{
+							index = 2;
+						}
+
+						if(doubleEntities[index] == null)
+						{
+							ClusteredMention newCluster = m.markSingleton();
+							mentions.add(newCluster);
+							doubleEntities[index] = newCluster.entity;
+						}
+						else
+						{
+							this.mentions.add(m.markCoreferent(doubleEntities[index]));
+						}
+					}
+					else
+					{
+						int index;
+						if(pronoun.speaker == Speaker.FIRST_PERSON)
+						{
+							index = 0;
+						}
+						else if(pronoun.speaker == Speaker.SECOND_PERSON)
+						{
+							index = 1;
+						}
+						else
+						{
+							index = 2;
+						}
+
+						if(singleEntities[index] == null)
+						{
+							ClusteredMention newCluster = m.markSingleton();
+							mentions.add(newCluster);
+							singleEntities[index] = newCluster.entity;
+						}
+						else
+						{
+							this.mentions.add(m.markCoreferent(singleEntities[index]));
+						}
+					}
+				}
+			}
+		}
+
+		for (Mention m:doc.getMentions())
+		{
+			if(m.getCorefferentWith() == null)
+			{
+				ClusteredMention newCluster = m.markSingleton();
+				mentions.add(newCluster);
+				System.out.println("A Pronoun that no one wants it: "+m.gloss());
+				for(Mention mm : nonPronouns)
+				{
+					System.out.println(mm.gloss()+", "+mm.headToken().isPluralNoun());
 				}
 			}
 		}
