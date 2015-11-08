@@ -19,11 +19,67 @@ public class RuleBased implements CoreferenceSystem {
 	private Document doc;
 	private List<ClusteredMention> mentions;
 	private Set<Entity> discoveredEntities;
+	private Map<String, Set<String>> headWordMap;
+
+	private void addToHeadWordMap(String word1, String word2)
+	{
+		if (headWordMap == null)
+		{
+			headWordMap = new HashMap<String, Set<String>>();
+		}
+
+		if (headWordMap.containsKey(word1))
+		{
+			headWordMap.get(word1).add(word2);
+		}
+		else
+		{
+			Set<String> temp = new HashSet<String>();
+			temp.add(word2);
+			headWordMap.put(word1, temp);
+		}
+
+		if (headWordMap.containsKey(word2))
+		{
+			headWordMap.get(word2).add(word1);
+		}
+		else
+		{
+			Set<String> temp = new HashSet<String>();
+			temp.add(word1);
+			headWordMap.put(word2, temp);
+		}
+	}
 
 	@Override
 	public void train(Collection<Pair<Document, List<Entity>>> trainingData) {
 
+		for (Pair<Document, List<Entity>> pair : trainingData)
+		{
+			for (Entity entity : pair.getSecond())
+			{
+				Set<String> currentSet = new HashSet<String>();
+				for (Mention m : entity.mentions)
+				{
+					String headWord = m.headWord();
+					if (!Pronoun.isSomePronoun(headWord))
+					{
+						currentSet.add(headWord);
+					}
+				}
+				String[] temp = new String[currentSet.size()];
+				currentSet.toArray(temp);
+				for(int i=0; i<temp.length-1; i++)
+				{
+					for(int j=i+1; j<temp.length; j++)
+					{
+						this.addToHeadWordMap(temp[i], temp[j]);
+					}
+				}
+			}
+		}
 	}
+
 
 	@Override
 	public List<ClusteredMention> runCoreference(Document doc) 
@@ -33,6 +89,7 @@ public class RuleBased implements CoreferenceSystem {
 		this.discoveredEntities = new HashSet<Entity>();
 
 		exactMatch();
+		trainedHeadMatch();
 		headMatch();
 		makeRestSingleton();
 		handlePronoun();
@@ -128,7 +185,7 @@ public class RuleBased implements CoreferenceSystem {
 
 		//TODO Need to be removed!
 		//		this.pronounExactMatch();
-//		System.out.println(this.doc.prettyPrint(discoveredEntities));
+		//		System.out.println(this.doc.prettyPrint(discoveredEntities));
 		for (Mention m : this.doc.getMentions())
 		{
 			Entity[] singleEntities = new Entity[4];
@@ -208,7 +265,7 @@ public class RuleBased implements CoreferenceSystem {
 				}
 			}
 		}
-		
+
 		for (Mention m:doc.getMentions())
 		{
 			if(m.getCorefferentWith() == null)
@@ -308,6 +365,39 @@ public class RuleBased implements CoreferenceSystem {
 				if(!Pronoun.isSomePronoun(m.gloss()))
 				{
 					singleMentions.put(mentionString,m);
+				}
+			}
+		}
+	}
+
+	private void trainedHeadMatch() {
+		for (Mention cm : doc.getMentions())
+		{
+			if (!Pronoun.isSomePronoun(cm.gloss()))
+			{
+				String cmHeadWord = cm.headWord();
+				for (Mention m : doc.getMentions())
+				{
+					if(cm != m && m.getCorefferentWith() == null && !Pronoun.isSomePronoun(m.gloss()))
+					{
+						String headWord = m.headWord();
+						if(this.headWordMap.containsKey(headWord))
+						{
+							if(headWordMap.get(headWord).contains(cmHeadWord))
+							{
+								Entity cmEntity = cm.getCorefferentWith();
+								if(cmEntity == null)
+								{
+									ClusteredMention newCluster = cm.markSingleton();
+									cmEntity = newCluster.entity;
+									this.mentions.add(newCluster);
+									this.discoveredEntities.add(newCluster.entity);
+								}
+								this.mentions.add(m.markCoreferent(cmEntity));
+							}
+						}
+
+					}
 				}
 			}
 		}
