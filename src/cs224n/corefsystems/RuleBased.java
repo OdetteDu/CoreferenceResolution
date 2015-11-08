@@ -102,6 +102,19 @@ public class RuleBased implements CoreferenceSystem {
 		handlePronoun();
 		return mentions;
 	}
+	
+	private void addToResult(Mention reference, Mention tobeAdded)
+	{
+		Entity entity = reference.getCorefferentWith();
+		if(entity == null)
+		{
+			ClusteredMention newCluster = reference.markSingleton();
+			entity = newCluster.entity;
+			this.mentions.add(newCluster);
+			this.discoveredEntities.add(newCluster.entity);
+		}
+		this.mentions.add(tobeAdded.markCoreferent(entity));
+	}
 
 	private void exactMatch()
 	{
@@ -175,10 +188,6 @@ public class RuleBased implements CoreferenceSystem {
 					cmDroppedString += cmWords.get(i) + " ";
 				}
 
-				//				System.out.println("Mention: "+cm.gloss()+" Head: "+cm.headWord());
-				//				System.out.println("Dropped: "+droppedString);
-				//				System.out.println(cm.beginIndexInclusive+", "+cm.headWordIndex+", "+cm.endIndexExclusive);
-				//				System.out.println(cm.sentence.toString());
 				for (Mention m : doc.getMentions())
 				{
 					if(cm != m && m.getCorefferentWith() == null && !Pronoun.isSomePronoun(m.gloss()))
@@ -192,21 +201,11 @@ public class RuleBased implements CoreferenceSystem {
 
 						if(cmDroppedString.equals(mDroppedString))
 						{
-							Entity cmEntity = cm.getCorefferentWith();
-							if(cmEntity == null)
-							{
-								ClusteredMention newCluster = cm.markSingleton();
-								cmEntity = newCluster.entity;
-								this.mentions.add(newCluster);
-								this.discoveredEntities.add(newCluster.entity);
-							}
-							this.mentions.add(m.markCoreferent(cmEntity));
+							addToResult(cm, m);
 						}
 					}
-
 				}
 			}
-
 		}
 	}
 
@@ -237,15 +236,7 @@ public class RuleBased implements CoreferenceSystem {
 
 				if(middleString.trim().equals("is"))
 				{
-					Entity cmEntity = first.getCorefferentWith();
-					if(cmEntity == null)
-					{
-						ClusteredMention newCluster = first.markSingleton();
-						cmEntity = newCluster.entity;
-						this.mentions.add(newCluster);
-						this.discoveredEntities.add(newCluster.entity);
-					}
-					this.mentions.add(second.markCoreferent(cmEntity));
+					addToResult(first, second);
 					break;
 				}
 			}
@@ -274,19 +265,9 @@ public class RuleBased implements CoreferenceSystem {
 			{	
 				if(first.endIndexExclusive == second.beginIndexInclusive)
 				{
-					//					System.out.println(first.sentence);
-					//					System.out.println(first.gloss()+" "+second.gloss());
 					if(second.headToken().nerTag().equals("PERSON") && Name.gender(first.gloss()) != Gender.NEUTRAL)
 					{
-						Entity cmEntity = first.getCorefferentWith();
-						if(cmEntity == null)
-						{
-							ClusteredMention newCluster = first.markSingleton();
-							cmEntity = newCluster.entity;
-							this.mentions.add(newCluster);
-							this.discoveredEntities.add(newCluster.entity);
-						}
-						this.mentions.add(second.markCoreferent(cmEntity));
+						addToResult(first, second);
 					}
 				}
 			}
@@ -314,7 +295,7 @@ public class RuleBased implements CoreferenceSystem {
 						acronym += c;
 					}
 				}
-//				System.out.println(acronym+": "+cm.gloss());
+
 				for (Mention m : doc.getMentions())
 				{
 					if(m.getCorefferentWith() == null && m.headToken().posTag().equals("NNP"))
@@ -322,21 +303,8 @@ public class RuleBased implements CoreferenceSystem {
 						String wm = m.gloss();
 						if(wm.equals(acronym)||(wm.length() > 4 && wm.substring(4, wm.length()).equals(acronym)))
 						{
-							Entity cmEntity = cm.getCorefferentWith();
-							if(cmEntity == null)
-							{
-								ClusteredMention newCluster = cm.markSingleton();
-								cmEntity = newCluster.entity;
-								this.mentions.add(newCluster);
-								this.discoveredEntities.add(newCluster.entity);
-							}
-							this.mentions.add(m.markCoreferent(cmEntity));
+							addToResult(cm, m);
 							break;
-						}
-						else
-						{
-//							System.out.println("First: "+cm.gloss());
-//							System.out.println("Second: "+m.gloss());
 						}
 					}
 				}
@@ -372,15 +340,7 @@ public class RuleBased implements CoreferenceSystem {
 							}
 							if(cmHeadWord.contains(mHeadWord) && containsAll)
 							{
-								Entity cmEntity = cm.getCorefferentWith();
-								if(cmEntity == null)
-								{
-									ClusteredMention newCluster = cm.markSingleton();
-									cmEntity = newCluster.entity;
-									this.mentions.add(newCluster);
-									this.discoveredEntities.add(newCluster.entity);
-								}
-								this.mentions.add(m.markCoreferent(cmEntity));
+								addToResult(cm, m);
 							}
 						}
 					}
@@ -408,15 +368,7 @@ public class RuleBased implements CoreferenceSystem {
 						{
 							if(cmHeadWord.contains(mHeadWord))
 							{
-								Entity cmEntity = cm.getCorefferentWith();
-								if(cmEntity == null)
-								{
-									ClusteredMention newCluster = cm.markSingleton();
-									cmEntity = newCluster.entity;
-									this.mentions.add(newCluster);
-									this.discoveredEntities.add(newCluster.entity);
-								}
-								this.mentions.add(m.markCoreferent(cmEntity));
+								addToResult(cm, m);
 							}
 						}
 					}
@@ -440,16 +392,7 @@ public class RuleBased implements CoreferenceSystem {
 						String headWord = m.headWord();
 						if(this.headWordMap.containsKey(headWord) && headWordMap.get(headWord).contains(cmHeadWord) && doc.indexOfMention(m) > doc.indexOfMention(cm))
 						{
-
-							Entity cmEntity = cm.getCorefferentWith();
-							if(cmEntity == null)
-							{
-								ClusteredMention newCluster = cm.markSingleton();
-								cmEntity = newCluster.entity;
-								this.mentions.add(newCluster);
-								this.discoveredEntities.add(newCluster.entity);
-							}
-							this.mentions.add(m.markCoreferent(cmEntity));
+							addToResult(cm, m);
 						}
 					}
 				}
@@ -472,16 +415,7 @@ public class RuleBased implements CoreferenceSystem {
 						String mHeadWord = m.headWord();
 						if(doc.indexOfMention(m) > cmIndex && cmHeadWord.contains(mHeadWord) && cm.headToken().nerTag().equals(m.headToken().nerTag()) && cm.headToken().isPluralNoun() == m.headToken().isPluralNoun())
 						{
-							Entity cmEntity = cm.getCorefferentWith();
-							if(cmEntity == null)
-							{
-								ClusteredMention newCluster = cm.markSingleton();
-								cmEntity = newCluster.entity;
-								this.mentions.add(newCluster);
-								this.discoveredEntities.add(newCluster.entity);
-							}
-							this.mentions.add(m.markCoreferent(cmEntity));
-
+							addToResult(cm, m);
 						}
 					}
 
@@ -507,15 +441,7 @@ public class RuleBased implements CoreferenceSystem {
 						{
 							if(cm.gloss().contains(mHeadWord) && Name.isName(cm.gloss()) && Name.isName(m.gloss()) && cm.headToken().nerTag() == m.headToken().nerTag())
 							{
-								Entity cmEntity = cm.getCorefferentWith();
-								if(cmEntity == null)
-								{
-									ClusteredMention newCluster = cm.markSingleton();
-									cmEntity = newCluster.entity;
-									this.mentions.add(newCluster);
-									this.discoveredEntities.add(newCluster.entity);
-								}
-								this.mentions.add(m.markCoreferent(cmEntity));
+								addToResult(cm, m);
 							}
 
 						}
@@ -558,7 +484,7 @@ public class RuleBased implements CoreferenceSystem {
 			{
 				for(Mention nonPronounMention : nonPronouns)
 				{
-					//							System.out.println(nonPronounMention+", "+m);
+					//System.out.println(nonPronounMention+", "+m);
 					Pronoun pronoun = Pronoun.getPronoun(m.headWord());
 					if(pronoun == null)
 					{
@@ -585,17 +511,7 @@ public class RuleBased implements CoreferenceSystem {
 								this.mentions.add(m.markCoreferent(nonPronounMention.getCorefferentWith()));
 								break;
 							}
-							else
-							{
-								//										System.out.println("Not have gender: "+nonPronounMention.gloss() + ": "+pronoun);
-							}
 						}
-						else
-						{
-							//									System.out.println("Plural: "+pronoun+": "+pronoun.plural);
-							//									System.out.println("Plural: "+nonPronounMention+": "+token.isPluralNoun());
-						}
-
 					}
 					else
 					{
@@ -605,15 +521,12 @@ public class RuleBased implements CoreferenceSystem {
 							this.mentions.add(m.markCoreferent(nonPronounMention.getCorefferentWith()));
 							break;
 						}
-						else
-						{
-							//TODO
-						}
 					}
 				}
 			}
 		}
 
+		// Speaker and Number match pronoun
 		for (Mention m : this.doc.getMentions())
 		{
 			Entity[] singleEntities = new Entity[4];
@@ -694,19 +607,19 @@ public class RuleBased implements CoreferenceSystem {
 			}
 		}
 
-		for (Mention m:doc.getMentions())
-		{
-			if(m.getCorefferentWith() == null)
-			{
-				ClusteredMention newCluster = m.markSingleton();
-				mentions.add(newCluster);
-				System.out.println("A Pronoun that no one wants it: "+m.gloss());
-				for(Mention mm : nonPronouns)
-				{
-					System.out.println(mm.gloss()+", "+mm.headToken().isPluralNoun());
-				}
-			}
-		}
+//		for (Mention m:doc.getMentions())
+//		{
+//			if(m.getCorefferentWith() == null)
+//			{
+//				ClusteredMention newCluster = m.markSingleton();
+//				mentions.add(newCluster);
+//				System.out.println("A Pronoun that no one wants it: "+m.gloss());
+//				for(Mention mm : nonPronouns)
+//				{
+//					System.out.println(mm.gloss()+", "+mm.headToken().isPluralNoun());
+//				}
+//			}
+//		}
 	}
 
 }
