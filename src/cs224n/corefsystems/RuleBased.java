@@ -91,6 +91,7 @@ public class RuleBased implements CoreferenceSystem {
 		exactMatch();
 		relaxedStringMatch();
 		predicateNominative();
+		roleAppositive();
 		strictHeadMatch();
 		variantHeadMatch();
 		properHeadMatch();
@@ -235,7 +236,6 @@ public class RuleBased implements CoreferenceSystem {
 				
 				if(middleString.trim().equals("is"))
 				{
-					System.out.println("Success: "+middleString.trim());
 					Entity cmEntity = first.getCorefferentWith();
 					if(cmEntity == null)
 					{
@@ -270,27 +270,23 @@ public class RuleBased implements CoreferenceSystem {
 		while(iterMention.hasNext())
 		{
 			if(second.getCorefferentWith() == null && doc.indexOfSentence(first.sentence) == doc.indexOfSentence(second.sentence))
-			{
-				List<String> words = first.sentence.words;
-				String middleString = "";
-				for(int i = first.endIndexExclusive+1; i<second.beginIndexInclusive; i++)
+			{	
+				if(first.endIndexExclusive == second.beginIndexInclusive)
 				{
-					middleString += words.get(i)+ " ";
-				}
-				
-				if(middleString.trim().equals("is"))
-				{
-					System.out.println("Success: "+middleString.trim());
-					Entity cmEntity = first.getCorefferentWith();
-					if(cmEntity == null)
+//					System.out.println(first.sentence);
+//					System.out.println(first.gloss()+" "+second.gloss());
+					if(second.headToken().nerTag().equals("PERSON") && Name.gender(first.gloss()) != Gender.NEUTRAL)
 					{
-						ClusteredMention newCluster = first.markSingleton();
-						cmEntity = newCluster.entity;
-						this.mentions.add(newCluster);
-						this.discoveredEntities.add(newCluster.entity);
+						Entity cmEntity = first.getCorefferentWith();
+						if(cmEntity == null)
+						{
+							ClusteredMention newCluster = first.markSingleton();
+							cmEntity = newCluster.entity;
+							this.mentions.add(newCluster);
+							this.discoveredEntities.add(newCluster.entity);
+						}
+						this.mentions.add(second.markCoreferent(cmEntity));
 					}
-					this.mentions.add(second.markCoreferent(cmEntity));
-					break;
 				}
 			}
 			first = second;
