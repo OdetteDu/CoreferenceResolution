@@ -89,6 +89,7 @@ public class RuleBased implements CoreferenceSystem {
 		this.discoveredEntities = new HashSet<Entity>();
 
 		exactMatch();
+		relaxedStringMatch();
 		strictHeadMatch();
 		variantHeadMatch();
 		properHeadMatch();
@@ -98,7 +99,7 @@ public class RuleBased implements CoreferenceSystem {
 		handlePronoun();
 		return mentions;
 	}
-	
+
 	private void exactMatch()
 	{
 		Map<String,Entity> clusters = new HashMap<String,Entity>();
@@ -203,7 +204,55 @@ public class RuleBased implements CoreferenceSystem {
 
 		}
 	}
-	
+
+	private void relaxedStringMatch()
+	{
+		for (Mention cm : doc.getMentions())
+		{
+			if (!Pronoun.isSomePronoun(cm.gloss()))
+			{
+				List<String> cmWords = cm.sentence.words;
+				String cmDroppedString = "";
+				for(int i=cm.beginIndexInclusive; i<=cm.headWordIndex; i++)
+				{
+					cmDroppedString += cmWords.get(i) + " ";
+				}
+				
+//				System.out.println("Mention: "+cm.gloss()+" Head: "+cm.headWord());
+//				System.out.println("Dropped: "+droppedString);
+//				System.out.println(cm.beginIndexInclusive+", "+cm.headWordIndex+", "+cm.endIndexExclusive);
+//				System.out.println(cm.sentence.toString());
+				for (Mention m : doc.getMentions())
+				{
+					if(cm != m && m.getCorefferentWith() == null && !Pronoun.isSomePronoun(m.gloss()))
+					{
+						List<String> mWords = m.sentence.words;
+						String mDroppedString = "";
+						for(int i=m.beginIndexInclusive; i<=m.headWordIndex; i++)
+						{
+							mDroppedString += mWords.get(i) + " ";
+						}
+						
+						if(cmDroppedString.equals(mDroppedString))
+						{
+							Entity cmEntity = cm.getCorefferentWith();
+							if(cmEntity == null)
+							{
+								ClusteredMention newCluster = cm.markSingleton();
+								cmEntity = newCluster.entity;
+								this.mentions.add(newCluster);
+								this.discoveredEntities.add(newCluster.entity);
+							}
+							this.mentions.add(m.markCoreferent(cmEntity));
+						}
+					}
+
+				}
+			}
+
+		}
+	}
+
 	private void variantHeadMatch()
 	{
 		for (Mention cm : doc.getMentions())
@@ -339,7 +388,7 @@ public class RuleBased implements CoreferenceSystem {
 
 		}
 	}
-	
+
 	private void makeRestSingleton()
 	{
 		for (Mention m : this.doc.getMentions())
