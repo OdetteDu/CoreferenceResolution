@@ -5,9 +5,11 @@ import java.util.*;
 import cs224n.coref.ClusteredMention;
 import cs224n.coref.Document;
 import cs224n.coref.Entity;
+import cs224n.coref.Gender;
 import cs224n.coref.Mention;
 import cs224n.coref.Name;
 import cs224n.coref.Pronoun;
+import cs224n.coref.Pronoun.Speaker;
 import cs224n.coref.Sentence;
 import cs224n.coref.Util;
 import cs224n.util.Pair;
@@ -48,70 +50,101 @@ public class RuleBased implements CoreferenceSystem {
 			}
 		}
 	}
-	
+
 	private void handlePronoun()
 	{
-		Map<Integer, List<Mention>> nonPronounMap = new HashMap<Integer, List<Mention>>();
-		
+//		Map<Integer, List<Mention>> nonPronounMap = new HashMap<Integer, List<Mention>>();
+		List<Mention> nonPronouns = new ArrayList<Mention>();
+
 		for (Mention m : this.doc.getMentions())
 		{
 			if (!Pronoun.isSomePronoun(m.gloss()))
 			{
-				int sentenceIndex = this.doc.indexOfSentence(m.sentence);
-				List<Mention> nonPronouns;
-				if(!nonPronounMap.containsKey(sentenceIndex))
-				{
-					nonPronouns = new ArrayList<Mention>();
-					nonPronounMap.put(sentenceIndex, nonPronouns);
-				}
-				else
-				{
-					nonPronouns = nonPronounMap.get(sentenceIndex);
-				}
+//				int sentenceIndex = this.doc.indexOfSentence(m.sentence);
+//				List<Mention> nonPronouns;
+//				if(!nonPronounMap.containsKey(sentenceIndex))
+//				{
+//					nonPronouns = new ArrayList<Mention>();
+//					nonPronounMap.put(sentenceIndex, nonPronouns);
+//				}
+//				else
+//				{
+//					nonPronouns = nonPronounMap.get(sentenceIndex);
+//				}
 				nonPronouns.add(m);
 			}
 		}
-		
+
 		//Start process pronoun
 		for (Mention m : this.doc.getMentions())
 		{
 			if (Pronoun.isSomePronoun(m.gloss()))
 			{
-				int sentenceIndex = this.doc.indexOfSentence(m.sentence);
-				for(int i = sentenceIndex - 3; i<=sentenceIndex; i++) //TODO: Test if we do it backwards, will it perform better?
-				{
-					if(m.getCorefferentWith() == null && nonPronounMap.containsKey(i))
-					{
-						for(Mention nonPronounMention : nonPronounMap.get(i))
+//				int sentenceIndex = this.doc.indexOfSentence(m.sentence);
+//				for(int i = 0; i<=sentenceIndex+10; i++) //TODO: Test if we do it backwards, will it perform better?
+//				{
+//					if(m.getCorefferentWith() == null && nonPronounMap.containsKey(i))
+//					{
+						for(Mention nonPronounMention : nonPronouns)
 						{
-							System.out.println(nonPronounMention+", "+m);
-							Sentence.Token token = nonPronounMention.headToken();
-							boolean isNoun = token.isNoun();
-							boolean isPluralNoun = token.isPluralNoun();
-							boolean isProperNoun = token.isProperNoun();
-							boolean isQuoted = token.isQuoted();
-							String lemma = token.lemma();
-							String nerTag = token.nerTag();
-							String posTag = token.posTag();
-							String speaker = token.speaker();
-							String word = token.word();
-							//Check if m agree with nonPronounMention
-							if(Name.isName(nonPronounMention.gloss()))
+							//							System.out.println(nonPronounMention+", "+m);
+							Pronoun pronoun = Pronoun.getPronoun(m.headWord());
+							if(pronoun == null)
 							{
-								System.out.println("Name");
-								System.out.println(Util.haveGenderAndAreSameGender(nonPronounMention, m));
-								System.out.println(Util.haveNumberAndAreSameNumber(nonPronounMention, m));
+								//TODO, if pronoun = one, it is null, need to handle this case
+								System.out.println(m+", "+m.headWord());
+								break;
+							}
+							Sentence.Token token = nonPronounMention.headToken();
+							String nerTag = token.nerTag();
+							if (nerTag.equals("PERSON"))
+							{
+								// Person
+								Pair<Boolean, Boolean> haveNumberAndSameNumber = Util.haveNumberAndAreSameNumber(nonPronounMention, m);
+								if(haveNumberAndSameNumber.getFirst() && haveNumberAndSameNumber.getSecond())
+								{
+									Pair<Boolean, Boolean> haveGenderAndSameGender = Util.haveGenderAndAreSameGender(nonPronounMention, m);
+									if((haveGenderAndSameGender.getFirst() && haveGenderAndSameGender.getSecond()))
+									{
+										this.mentions.add(m.markCoreferent(nonPronounMention.getCorefferentWith()));
+										break;
+									}
+									else if(pronoun.gender != Gender.NEUTRAL)
+									{
+										this.mentions.add(m.markCoreferent(nonPronounMention.getCorefferentWith()));
+										break;
+									}
+									else
+									{
+//										System.out.println("Not have gender: "+nonPronounMention.gloss() + ": "+pronoun);
+									}
+								}
+								else
+								{
+//									System.out.println("Plural: "+pronoun+": "+pronoun.plural);
+//									System.out.println("Plural: "+nonPronounMention+": "+token.isPluralNoun());
+								}
+
 							}
 							else
 							{
-								System.out.println("Not name");
+								// Not Person
+								if(pronoun.speaker == Speaker.THIRD_PERSON && token.isPluralNoun() == pronoun.plural)
+								{
+									this.mentions.add(m.markCoreferent(nonPronounMention.getCorefferentWith()));
+									break;
+								}
+								else
+								{
+									//TODO
+								}
 							}
-						}
-					}
+//						}
+//					}
 				}
 			}
 		}
-		
+
 		//TODO Need to be removed!
 		for (Mention m : this.doc.getMentions())
 		{
@@ -119,6 +152,7 @@ public class RuleBased implements CoreferenceSystem {
 			{
 				ClusteredMention newCluster = m.markSingleton();
 				mentions.add(newCluster);
+				System.out.println(m.gloss());
 			}
 		}
 	}
