@@ -89,8 +89,9 @@ public class RuleBased implements CoreferenceSystem {
 		this.discoveredEntities = new HashSet<Entity>();
 
 		exactMatch();
+		strictHeadMatch();
 		trainedHeadMatch();
-		headMatch();
+		flexHeadMatch();
 		makeRestSingleton();
 		handlePronoun();
 		return mentions;
@@ -183,7 +184,6 @@ public class RuleBased implements CoreferenceSystem {
 			}
 		}
 
-		//TODO Need to be removed!
 		//		this.pronounExactMatch();
 		//		System.out.println(this.doc.prettyPrint(discoveredEntities));
 		for (Mention m : this.doc.getMentions())
@@ -281,7 +281,7 @@ public class RuleBased implements CoreferenceSystem {
 		}
 	}
 
-	private void headMatch()
+	private void strictHeadMatch()
 	{
 		for (Mention cm : doc.getMentions())
 		{
@@ -309,30 +309,54 @@ public class RuleBased implements CoreferenceSystem {
 								}
 								this.mentions.add(m.markCoreferent(cmEntity));
 							}
-							else
+						}
+					}
+
+				}
+			}
+
+		}
+	}
+
+	private void flexHeadMatch()
+	{
+		for (Mention cm : doc.getMentions())
+		{
+			if (!Pronoun.isSomePronoun(cm.gloss()))
+			{
+				int cmIndex = doc.indexOfMention(cm);
+				String cmHeadWord = cm.headWord();
+				List<String> cmText = cm.text();
+				for (Mention m : doc.getMentions())
+				{
+					if(cm != m && m.getCorefferentWith() == null && !Pronoun.isSomePronoun(m.gloss()))
+					{
+						String mHeadWord = m.headWord();
+						if(doc.indexOfMention(m) > cmIndex)
+						{
+
+							boolean containsAll = true;
+							for(String s : m.text())
 							{
-								boolean containsAll = true;
-								for(String s : m.text())
+								if(!cmText.contains(s))
 								{
-									if(!cmText.contains(s))
-									{
-										containsAll = false;
-										break;
-									}
-								}
-								if (containsAll)
-								{
-									Entity cmEntity = cm.getCorefferentWith();
-									if(cmEntity == null)
-									{
-										ClusteredMention newCluster = cm.markSingleton();
-										cmEntity = newCluster.entity;
-										this.mentions.add(newCluster);
-										this.discoveredEntities.add(newCluster.entity);
-									}
-									this.mentions.add(m.markCoreferent(cmEntity));
+									containsAll = false;
+									break;
 								}
 							}
+							if (containsAll)
+							{
+								Entity cmEntity = cm.getCorefferentWith();
+								if(cmEntity == null)
+								{
+									ClusteredMention newCluster = cm.markSingleton();
+									cmEntity = newCluster.entity;
+									this.mentions.add(newCluster);
+									this.discoveredEntities.add(newCluster.entity);
+								}
+								this.mentions.add(m.markCoreferent(cmEntity));
+							}
+
 						}
 					}
 
