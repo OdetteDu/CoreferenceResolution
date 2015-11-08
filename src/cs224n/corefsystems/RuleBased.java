@@ -92,6 +92,7 @@ public class RuleBased implements CoreferenceSystem {
 		relaxedStringMatch();
 		predicateNominative();
 		roleAppositive();
+		acronym();
 		strictHeadMatch();
 		variantHeadMatch();
 		properHeadMatch();
@@ -233,7 +234,7 @@ public class RuleBased implements CoreferenceSystem {
 				{
 					middleString += words.get(i)+ " ";
 				}
-				
+
 				if(middleString.trim().equals("is"))
 				{
 					Entity cmEntity = first.getCorefferentWith();
@@ -252,7 +253,7 @@ public class RuleBased implements CoreferenceSystem {
 			second = iterMention.next();
 		}
 	}
-	
+
 	private void roleAppositive()
 	{
 		List<Mention> mentionList = doc.getMentions();
@@ -273,8 +274,8 @@ public class RuleBased implements CoreferenceSystem {
 			{	
 				if(first.endIndexExclusive == second.beginIndexInclusive)
 				{
-//					System.out.println(first.sentence);
-//					System.out.println(first.gloss()+" "+second.gloss());
+					//					System.out.println(first.sentence);
+					//					System.out.println(first.gloss()+" "+second.gloss());
 					if(second.headToken().nerTag().equals("PERSON") && Name.gender(first.gloss()) != Gender.NEUTRAL)
 					{
 						Entity cmEntity = first.getCorefferentWith();
@@ -291,6 +292,56 @@ public class RuleBased implements CoreferenceSystem {
 			}
 			first = second;
 			second = iterMention.next();
+		}
+	}
+
+	private void acronym()
+	{
+		for (Mention cm : doc.getMentions())
+		{
+			if (!Pronoun.isSomePronoun(cm.gloss()) && cm.headToken().posTag().equals("NNP"))
+			{
+				List<String> words = cm.sentence.words;
+				int indexBegin = cm.beginIndexInclusive;
+				int indexEnd = cm.endIndexExclusive;
+				String acronym = "";
+				for(int i=indexBegin; i<indexEnd; i++)
+				{
+					String w = words.get(i).toLowerCase();
+					if(!w.equals("the") && !w.equals("of") && !w.equals("and"))
+					{
+						String c = words.get(i).trim().substring(0, 1).toUpperCase();
+						acronym += c;
+					}
+				}
+//				System.out.println(acronym+": "+cm.gloss());
+				for (Mention m : doc.getMentions())
+				{
+					if(m.getCorefferentWith() == null && m.headToken().posTag().equals("NNP"))
+					{
+						String wm = m.gloss();
+						if(wm.equals(acronym)||(wm.length() > 4 && wm.substring(4, wm.length()).equals(acronym)))
+						{
+							Entity cmEntity = cm.getCorefferentWith();
+							if(cmEntity == null)
+							{
+								ClusteredMention newCluster = cm.markSingleton();
+								cmEntity = newCluster.entity;
+								this.mentions.add(newCluster);
+								this.discoveredEntities.add(newCluster.entity);
+							}
+							this.mentions.add(m.markCoreferent(cmEntity));
+							break;
+						}
+						else
+						{
+//							System.out.println("First: "+cm.gloss());
+//							System.out.println("Second: "+m.gloss());
+						}
+					}
+				}
+			}
+
 		}
 	}
 
