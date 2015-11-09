@@ -516,7 +516,7 @@ public class RuleBased implements CoreferenceSystem {
 					else
 					{
 						// Not Person
-						if(token.isPluralNoun() == pronoun.plural)
+						if( token.isPluralNoun() == pronoun.plural)
 						{
 							this.mentions.add(m.markCoreferent(nonPronounMention.getCorefferentWith()));
 							break;
