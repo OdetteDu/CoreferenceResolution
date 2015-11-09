@@ -465,7 +465,7 @@ public class RuleBased implements CoreferenceSystem {
 				{
 					int nonPronounSentenceIndex = this.doc.indexOfSentence(nonPronounMention.sentence);
 					int pronounSentenceIndex = this.doc.indexOfSentence(m.sentence);
-					if(nonPronounSentenceIndex >= pronounSentenceIndex - 3 && nonPronounSentenceIndex <= pronounSentenceIndex)
+					if(nonPronounSentenceIndex == pronounSentenceIndex)
 					{
 						Pronoun pronoun = Pronoun.getPronoun(m.headWord());
 						if(pronoun == null)
@@ -718,7 +718,7 @@ public class RuleBased implements CoreferenceSystem {
 				{
 					int nonPronounSentenceIndex = this.doc.indexOfSentence(nonPronounMention.sentence);
 					int pronounSentenceIndex = this.doc.indexOfSentence(m.sentence);
-					if(nonPronounSentenceIndex >= pronounSentenceIndex - 3 && nonPronounSentenceIndex <= pronounSentenceIndex)
+					if(nonPronounSentenceIndex == pronounSentenceIndex)
 					{
 						Sentence.Token token = nonPronounMention.headToken();
 						String nerTag = token.nerTag();
