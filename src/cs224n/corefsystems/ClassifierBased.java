@@ -48,6 +48,7 @@ public class ClassifierBased implements CoreferenceSystem {
 			Pair.make(Feature.Plural1.class, Feature.Plural2.class),
 //			Feature.Length.class,
 //			Feature.Common.class,
+			Feature.Appositive.class,
 	});
 
 
@@ -188,6 +189,26 @@ public class ClassifierBased implements CoreferenceSystem {
 					i += 1;
 				}
 				return new Feature.Common(common);
+			} else if (clazz.equals(Feature.Appositive.class)) {
+				if (onPrix.doc.indexOfSentence(onPrix.sentence) == onPrix.doc.indexOfSentence(candidate.sentence)){
+//					System.out.println(onPrix.beginIndexInclusive + " " + onPrix.endIndexExclusive + " " + candidate.beginIndexInclusive + " " + candidate.endIndexExclusive);
+					if (onPrix.beginIndexInclusive - candidate.endIndexExclusive == 2) {
+						String middle = onPrix.sentence.words.get(candidate.endIndexExclusive + 1);
+						List<String> middleWords = Arrays.asList(",", "is", "that", "which", "when", "where", "while", "the", "--", "why", "how");
+//						System.out.println(middle);
+						if (middleWords.contains(middle)) {
+							
+							return new Feature.Appositive(true);
+						}
+					}
+					
+					if (onPrix.beginIndexInclusive - candidate.endIndexExclusive == 1) {				
+							return new Feature.Appositive(true);
+					}
+				}
+//				System.out.println(onPrix.toString() + "    " + candidate.toString());
+//				System.out.println(onPrix.headToken().posTag() + "   " + candidate.headToken().posTag());
+				return new Feature.Appositive(false);
 			}
 			
 			else {

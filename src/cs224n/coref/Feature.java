@@ -144,6 +144,10 @@ public static class Plural2 extends Indicator {
     public Plural2(boolean speakerTag){ super(speakerTag); }
   }
 
+public static class Appositive extends Indicator {
+    public Appositive(boolean speakerTag){ super(speakerTag); }
+  }
+
 public static class Length extends IntIndicator {
     public Length(int length){ super(length); }
   }
