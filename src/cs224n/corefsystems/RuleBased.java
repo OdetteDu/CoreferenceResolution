@@ -101,6 +101,7 @@ public class RuleBased implements CoreferenceSystem {
 		flexHeadMatch();
 		makeRestSingleton();
 		handlePronoun();
+		//		System.out.println(this.doc.prettyPrint(this.discoveredEntities));
 		return mentions;
 	}
 
@@ -410,12 +411,10 @@ public class RuleBased implements CoreferenceSystem {
 							{
 								addToResult(cm, m);
 							}
-
 						}
 					}
 				}
 			}
-
 		}
 	}
 
@@ -443,17 +442,17 @@ public class RuleBased implements CoreferenceSystem {
 		}
 
 		this.moreStrictPronounMatch(nonPronouns);
+		this.quotePronounMatch(nonPronouns);
+		this.dialogePronounMatch(nonPronouns);
 		this.strictPronounMatch(nonPronouns);
-		this.medianStrictPronounMatch(nonPronouns);
+		this.posessivePronounMatch(nonPronouns);
 		this.flexPronounMatch(nonPronouns);
 		this.moreFlexPronounMatch(nonPronouns);
 		this.mostFlexPronounMatch(nonPronouns);
-		//		this.mostmostFlexPronounMatch(nonPronouns);
-		//		this.pronounSingleton(nonPronouns);
+//		this.mostmostFlexPronounMatch(nonPronouns);
+//		this.pronounSingleton(nonPronouns);
 		this.pronounSelfMatch();
 	}
-
-	
 
 	private void moreStrictPronounMatch(List<Mention> nonPronouns)
 	{
@@ -503,6 +502,113 @@ public class RuleBased implements CoreferenceSystem {
 		}
 	}
 
+	private void quotePronounMatch(List<Mention> nonPronouns)
+	{
+		for (Mention m : this.doc.getMentions())
+		{
+			if (m.getCorefferentWith() == null && Pronoun.isSomePronoun(m.gloss()))
+			{
+				for(Mention nonPronounMention : this.doc.getMentions())
+				{
+					int nonPronounSentenceIndex = this.doc.indexOfSentence(nonPronounMention.sentence);
+					int pronounSentenceIndex = this.doc.indexOfSentence(m.sentence);
+					if(nonPronounSentenceIndex == pronounSentenceIndex)
+					{
+						Pronoun pronoun = Pronoun.getPronoun(m.headWord());
+						if(pronoun == null)
+						{
+							break;
+						}
+						Sentence.Token token = nonPronounMention.headToken();
+						String nerTag = token.nerTag();
+						if (nerTag.equals("PERSON") && pronoun.speaker == Speaker.FIRST_PERSON 
+								&& !token.isQuoted() && m.headToken().isQuoted())
+						{
+							//							System.out.println("Quoted: "+pronoun + " & " + nonPronounMention.gloss());
+							//							System.out.println(m.sentence);
+							this.addToResult(nonPronounMention, m);
+							break;
+						}
+					}
+				}
+			}
+		}
+	}
+
+	private void dialogePronounMatch(List<Mention> nonPronouns)
+	{
+		for (Mention prevMention : this.doc.getMentions())
+		{
+			if(Pronoun.isSomePronoun(prevMention.gloss()) && prevMention.headToken().isQuoted())
+			{
+				Pronoun prevPronoun = Pronoun.getPronoun(prevMention.headWord());
+				if(prevPronoun == null)
+				{
+					break;
+				}
+				for(Mention currMention : this.doc.getMentions())
+				{
+					if (currMention.getCorefferentWith() == null && Pronoun.isSomePronoun(currMention.gloss()) && currMention.headToken().isQuoted())
+					{
+						int prevSentenceIndex = this.doc.indexOfSentence(prevMention.sentence);
+						int currSentenceIndex = this.doc.indexOfSentence(currMention.sentence);
+						if(currSentenceIndex - prevSentenceIndex == 1)
+						{
+							Pronoun currPronoun = Pronoun.getPronoun(currMention.headWord());
+							if(currPronoun == null)
+							{
+								break;
+							}
+
+							//Determine if they are in the same quote
+							String prevPart = "";
+							for (int i = prevMention.endIndexExclusive; i<prevMention.sentence.length(); i++)
+							{
+								prevPart += prevMention.sentence.words.get(i) + " ";
+							}
+
+							String currPart = "";
+							for (int i = 0; i<currMention.beginIndexInclusive; i++)
+							{
+								currPart += currMention.sentence.words.get(i) + " ";
+							}
+
+							String combinedPart = prevPart + currPart;
+
+							if(combinedPart.contains("\""))
+							{
+								//Separate Sentence
+								if((prevPronoun.type == currPronoun.type || (prevPronoun.type == Type.SUBJECTIVE && currPronoun.type == Type.OBJECTIVE) || (prevPronoun.type == Type.OBJECTIVE && currPronoun.type == Type.SUBJECTIVE)) && prevPronoun.plural == currPronoun.plural)
+								{
+									if(prevPronoun.speaker == Speaker.FIRST_PERSON && currPronoun.speaker == Speaker.SECOND_PERSON)
+									{
+										//										System.out.println("Dialoge: "+prevPronoun + " & " + currPronoun);
+										//										System.out.println(prevMention.sentence);
+										//										System.out.println(currMention.sentence);
+										this.addToResult(prevMention, currMention);
+										break;
+									}
+									else if(prevPronoun.speaker == Speaker.SECOND_PERSON && currPronoun.speaker == Speaker.FIRST_PERSON)
+									{
+										//										System.out.println("Dialoge: "+prevPronoun + " & " + currPronoun);
+										//										System.out.println(prevMention.sentence);
+										//										System.out.println(currMention.sentence);
+										this.addToResult(prevMention, currMention);
+										break;
+									}
+								}
+							}
+							//							System.out.println("Dialoge: "+prevPronoun + " & " + currPronoun);
+							//							System.out.println("Combined: "+combinedPart);
+							//							System.out.println(prevMention.sentence);
+							//							System.out.println(currMention.sentence);
+						}
+					}
+				}
+			}
+		}
+	}
+
 	private void strictPronounMatch(List<Mention> nonPronouns)
 	{
 		for (Mention m : this.doc.getMentions())
@@ -545,8 +651,8 @@ public class RuleBased implements CoreferenceSystem {
 			}
 		}
 	}
-	
-	private void medianStrictPronounMatch(List<Mention> nonPronouns)
+
+	private void posessivePronounMatch(List<Mention> nonPronouns)
 	{
 		for (Mention m : this.doc.getMentions())
 		{
@@ -570,13 +676,13 @@ public class RuleBased implements CoreferenceSystem {
 							{
 								if(s.contains(" and ") && pronoun.plural)
 								{
-									System.out.println("Possive: " + s + " " + pronoun);
+									//									System.out.println("Possive: " + s + " " + pronoun);
 									this.mentions.add(m.markCoreferent(nonPronounMention.getCorefferentWith()));
 									break;
 								}
 								else if(!s.contains(" and ") && !pronoun.plural)
 								{
-									System.out.println("Possive: " + s + " " + pronoun);
+									//									System.out.println("Possive: " + s + " " + pronoun);
 									this.mentions.add(m.markCoreferent(nonPronounMention.getCorefferentWith()));
 									break;
 								}
@@ -777,6 +883,7 @@ public class RuleBased implements CoreferenceSystem {
 					if(nonPronounSentenceIndex >= pronounSentenceIndex - 3 && nonPronounSentenceIndex <= pronounSentenceIndex)
 					{
 						this.mentions.add(m.markCoreferent(nonPronounMention.getCorefferentWith()));
+						break;
 					}
 				}
 			}
