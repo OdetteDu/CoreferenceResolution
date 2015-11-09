@@ -10,6 +10,7 @@ import cs224n.coref.Mention;
 import cs224n.coref.Name;
 import cs224n.coref.Pronoun;
 import cs224n.coref.Pronoun.Speaker;
+import cs224n.coref.Pronoun.Type;
 import cs224n.coref.Sentence;
 import cs224n.coref.Util;
 import cs224n.util.Pair;
@@ -90,8 +91,8 @@ public class RuleBased implements CoreferenceSystem {
 
 		exactMatch();
 		relaxedStringMatch();
-//		predicateNominative();
-//		roleAppositive();
+		//		predicateNominative();
+		//		roleAppositive();
 		acronym();
 		strictHeadMatch();
 		variantHeadMatch();
@@ -278,7 +279,6 @@ public class RuleBased implements CoreferenceSystem {
 					}
 				}
 			}
-
 		}
 	}
 
@@ -313,7 +313,6 @@ public class RuleBased implements CoreferenceSystem {
 							}
 						}
 					}
-
 				}
 			}
 
@@ -390,7 +389,6 @@ public class RuleBased implements CoreferenceSystem {
 
 				}
 			}
-
 		}
 	}
 
@@ -415,7 +413,6 @@ public class RuleBased implements CoreferenceSystem {
 
 						}
 					}
-
 				}
 			}
 
@@ -444,15 +441,19 @@ public class RuleBased implements CoreferenceSystem {
 				nonPronouns.add(m);
 			}
 		}
+
 		this.moreStrictPronounMatch(nonPronouns);
 		this.strictPronounMatch(nonPronouns);
+		this.medianStrictPronounMatch(nonPronouns);
 		this.flexPronounMatch(nonPronouns);
 		this.moreFlexPronounMatch(nonPronouns);
 		this.mostFlexPronounMatch(nonPronouns);
-//		this.mostmostFlexPronounMatch(nonPronouns);
-//		this.pronounSingleton(nonPronouns);
+		//		this.mostmostFlexPronounMatch(nonPronouns);
+		//		this.pronounSingleton(nonPronouns);
 		this.pronounSelfMatch();
 	}
+
+	
 
 	private void moreStrictPronounMatch(List<Mention> nonPronouns)
 	{
@@ -530,6 +531,58 @@ public class RuleBased implements CoreferenceSystem {
 								break;
 							}
 						}
+					}
+					else
+					{
+						// Not Person
+						if((pronoun.gender == Gender.NEUTRAL) && token.isPluralNoun() == pronoun.plural)
+						{
+							this.mentions.add(m.markCoreferent(nonPronounMention.getCorefferentWith()));
+							break;
+						}
+					}
+				}
+			}
+		}
+	}
+	
+	private void medianStrictPronounMatch(List<Mention> nonPronouns)
+	{
+		for (Mention m : this.doc.getMentions())
+		{
+			if (m.getCorefferentWith() == null && Pronoun.isSomePronoun(m.gloss()))
+			{
+				for(Mention nonPronounMention : nonPronouns)
+				{
+					Pronoun pronoun = Pronoun.getPronoun(m.headWord());
+					if(pronoun == null)
+					{
+						break;
+					}
+					Sentence.Token token = nonPronounMention.headToken();
+					String nerTag = token.nerTag();
+					if (nerTag.equals("PERSON"))
+					{
+						String s = nonPronounMention.gloss();
+						if(s.length() > 1 && s.substring(s.length()-2, s.length()).equals("'s"))
+						{
+							if(pronoun.type == Type.POSESSIVE_DETERMINER && pronoun.speaker == Speaker.THIRD_PERSON)
+							{
+								if(s.contains(" and ") && pronoun.plural)
+								{
+									System.out.println("Possive: " + s + " " + pronoun);
+									this.mentions.add(m.markCoreferent(nonPronounMention.getCorefferentWith()));
+									break;
+								}
+								else if(!s.contains(" and ") && !pronoun.plural)
+								{
+									System.out.println("Possive: " + s + " " + pronoun);
+									this.mentions.add(m.markCoreferent(nonPronounMention.getCorefferentWith()));
+									break;
+								}
+							}
+						}
+
 					}
 					else
 					{
