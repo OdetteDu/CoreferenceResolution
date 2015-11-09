@@ -90,8 +90,8 @@ public class RuleBased implements CoreferenceSystem {
 
 		exactMatch();
 		relaxedStringMatch();
-		predicateNominative();
-		roleAppositive();
+//		predicateNominative();
+//		roleAppositive();
 		acronym();
 		strictHeadMatch();
 		variantHeadMatch();
@@ -449,7 +449,8 @@ public class RuleBased implements CoreferenceSystem {
 		this.flexPronounMatch(nonPronouns);
 		this.moreFlexPronounMatch(nonPronouns);
 		this.mostFlexPronounMatch(nonPronouns);
-		this.pronounSingleton(nonPronouns);
+//		this.mostmostFlexPronounMatch(nonPronouns);
+//		this.pronounSingleton(nonPronouns);
 		this.pronounSelfMatch();
 	}
 
@@ -662,42 +663,67 @@ public class RuleBased implements CoreferenceSystem {
 			{
 				for(Mention nonPronounMention : nonPronouns)
 				{
-					Sentence.Token token = nonPronounMention.headToken();
-					String nerTag = token.nerTag();
-
-					Pronoun pronoun = Pronoun.getPronoun(m.headWord());
-					if(pronoun == null)
+					int nonPronounSentenceIndex = this.doc.indexOfSentence(nonPronounMention.sentence);
+					int pronounSentenceIndex = this.doc.indexOfSentence(m.sentence);
+					if(nonPronounSentenceIndex >= pronounSentenceIndex - 3 && nonPronounSentenceIndex <= pronounSentenceIndex)
 					{
-						if(!token.isPluralNoun())
-						{
-							this.mentions.add(m.markCoreferent(nonPronounMention.getCorefferentWith()));
-						}
-						break;
-					}
+						Sentence.Token token = nonPronounMention.headToken();
+						String nerTag = token.nerTag();
 
-					if (nerTag.equals("PERSON"))
-					{
-						// Person
-						Pair<Boolean, Boolean> haveNumberAndSameNumber = Util.haveNumberAndAreSameNumber(nonPronounMention, m);
-						if(haveNumberAndSameNumber.getFirst() && haveNumberAndSameNumber.getSecond())
+						Pronoun pronoun = Pronoun.getPronoun(m.headWord());
+						if(pronoun == null)
 						{
-							Pair<Boolean, Boolean> haveGenderAndSameGender = Util.haveGenderAndAreSameGender(nonPronounMention, m);
-							if((haveGenderAndSameGender.getFirst() && haveGenderAndSameGender.getSecond()))
+							if(!token.isPluralNoun())
 							{
 								this.mentions.add(m.markCoreferent(nonPronounMention.getCorefferentWith()));
-								break;
 							}
-							else if(pronoun.gender != Gender.NEUTRAL)
+							break;
+						}
+
+						if (nerTag.equals("PERSON"))
+						{
+							// Person
+							Pair<Boolean, Boolean> haveNumberAndSameNumber = Util.haveNumberAndAreSameNumber(nonPronounMention, m);
+							if(haveNumberAndSameNumber.getFirst() && haveNumberAndSameNumber.getSecond())
 							{
-								this.mentions.add(m.markCoreferent(nonPronounMention.getCorefferentWith()));
-								break;
+								Pair<Boolean, Boolean> haveGenderAndSameGender = Util.haveGenderAndAreSameGender(nonPronounMention, m);
+								if((haveGenderAndSameGender.getFirst() && haveGenderAndSameGender.getSecond()))
+								{
+									this.mentions.add(m.markCoreferent(nonPronounMention.getCorefferentWith()));
+									break;
+								}
+								else if(pronoun.gender != Gender.NEUTRAL)
+								{
+									this.mentions.add(m.markCoreferent(nonPronounMention.getCorefferentWith()));
+									break;
+								}
 							}
 						}
+						else
+						{
+							if(m.getCorefferentWith() == null)
+								this.mentions.add(m.markCoreferent(nonPronounMention.getCorefferentWith()));
+						}
 					}
-					else
+				}
+			}
+		}
+	}
+
+	private void mostmostFlexPronounMatch(List<Mention> nonPronouns)
+	{
+		//Start process pronoun
+		for (Mention m : this.doc.getMentions())
+		{
+			if (m.getCorefferentWith() == null && Pronoun.isSomePronoun(m.gloss()))
+			{
+				for(Mention nonPronounMention : nonPronouns)
+				{
+					int nonPronounSentenceIndex = this.doc.indexOfSentence(nonPronounMention.sentence);
+					int pronounSentenceIndex = this.doc.indexOfSentence(m.sentence);
+					if(nonPronounSentenceIndex >= pronounSentenceIndex - 3 && nonPronounSentenceIndex <= pronounSentenceIndex)
 					{
-						if(m.getCorefferentWith() == null)
-							this.mentions.add(m.markCoreferent(nonPronounMention.getCorefferentWith()));
+						this.mentions.add(m.markCoreferent(nonPronounMention.getCorefferentWith()));
 					}
 				}
 			}
