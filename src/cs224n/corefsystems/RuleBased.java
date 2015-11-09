@@ -102,7 +102,7 @@ public class RuleBased implements CoreferenceSystem {
 		handlePronoun();
 		return mentions;
 	}
-	
+
 	private void addToResult(Mention reference, Mention tobeAdded)
 	{
 		Entity entity = reference.getCorefferentWith();
@@ -139,37 +139,6 @@ public class RuleBased implements CoreferenceSystem {
 				if(!Pronoun.isSomePronoun(m.gloss()))
 				{
 					singleMentions.put(mentionString,m);
-				}
-			}
-		}
-	}
-
-	private void pronounExactMatch()
-	{
-		Map<String,Entity> clusters = new HashMap<String,Entity>();
-		Map<String,Mention> singleMentions = new HashMap<String, Mention>();
-		for(Mention m : doc.getMentions()){
-			if(m.getCorefferentWith() == null)
-			{
-				String mentionString = m.gloss();
-				if(clusters.containsKey(mentionString)){
-					mentions.add(m.markCoreferent(clusters.get(mentionString)));
-				} 
-				else if(singleMentions.containsKey(mentionString))
-				{
-					Mention previousMention = singleMentions.get(mentionString);
-					ClusteredMention newCluster = previousMention.markSingleton();
-					mentions.add(newCluster);
-					clusters.put(mentionString,newCluster.entity);
-					this.discoveredEntities.add(newCluster.entity);
-					mentions.add(m.markCoreferent(newCluster));
-					singleMentions.remove(mentionString);
-				}
-				else {
-					if(Pronoun.isSomePronoun(m.gloss()))
-					{
-						singleMentions.put(mentionString,m);
-					}
 				}
 			}
 		}
@@ -477,6 +446,14 @@ public class RuleBased implements CoreferenceSystem {
 			}
 		}
 
+		this.strictPronounMatch(nonPronouns);
+		this.pronounSelfMatch();
+
+
+	}
+
+	private void strictPronounMatch(List<Mention> nonPronouns)
+	{
 		//Start process pronoun
 		for (Mention m : this.doc.getMentions())
 		{
@@ -525,7 +502,10 @@ public class RuleBased implements CoreferenceSystem {
 				}
 			}
 		}
+	}
 
+	private void pronounSelfMatch()
+	{
 		// Speaker and Number match pronoun
 		for (Mention m : this.doc.getMentions())
 		{
@@ -606,20 +586,54 @@ public class RuleBased implements CoreferenceSystem {
 				}
 			}
 		}
+	}
 
-//		for (Mention m:doc.getMentions())
-//		{
-//			if(m.getCorefferentWith() == null)
-//			{
-//				ClusteredMention newCluster = m.markSingleton();
-//				mentions.add(newCluster);
-//				System.out.println("A Pronoun that no one wants it: "+m.gloss());
-//				for(Mention mm : nonPronouns)
-//				{
-//					System.out.println(mm.gloss()+", "+mm.headToken().isPluralNoun());
-//				}
-//			}
-//		}
+	private void pronounExactMatch()
+	{
+		Map<String,Entity> clusters = new HashMap<String,Entity>();
+		Map<String,Mention> singleMentions = new HashMap<String, Mention>();
+		for(Mention m : doc.getMentions()){
+			if(m.getCorefferentWith() == null)
+			{
+				String mentionString = m.gloss();
+				if(clusters.containsKey(mentionString)){
+					mentions.add(m.markCoreferent(clusters.get(mentionString)));
+				} 
+				else if(singleMentions.containsKey(mentionString))
+				{
+					Mention previousMention = singleMentions.get(mentionString);
+					ClusteredMention newCluster = previousMention.markSingleton();
+					mentions.add(newCluster);
+					clusters.put(mentionString,newCluster.entity);
+					this.discoveredEntities.add(newCluster.entity);
+					mentions.add(m.markCoreferent(newCluster));
+					singleMentions.remove(mentionString);
+				}
+				else {
+					if(Pronoun.isSomePronoun(m.gloss()))
+					{
+						singleMentions.put(mentionString,m);
+					}
+				}
+			}
+		}
+	}
+
+	private void pronounSingleton(List<Mention> nonPronouns)
+	{
+		for (Mention m:doc.getMentions())
+		{
+			if(m.getCorefferentWith() == null)
+			{
+				ClusteredMention newCluster = m.markSingleton();
+				mentions.add(newCluster);
+				System.out.println("A Pronoun that no one wants it: "+m.gloss());
+				for(Mention mm : nonPronouns)
+				{
+					System.out.println(mm.gloss()+", "+mm.headToken().isPluralNoun());
+				}
+			}
+		}
 	}
 
 }
