@@ -105,12 +105,12 @@ public class RuleBased implements CoreferenceSystem {
 		this.mentions = new ArrayList<ClusteredMention>();
 		this.discoveredEntities = new HashSet<Entity>();
 
-		exactMatch();
-		relaxedStringMatch();
+		//exactMatch();
+		//relaxedStringMatch();
 		//		predicateNominative();
 		//		roleAppositive();
 		acronym();
-		strictHeadMatch();
+		//strictHeadMatch();
 		variantHeadMatch();
 		properHeadMatch();
 		trainedHeadMatch();
