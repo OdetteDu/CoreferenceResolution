@@ -79,7 +79,7 @@ public class RuleBased implements CoreferenceSystem {
 				for (Mention m : entity.mentions)
 				{
 					String headWord = m.headWord();
-					if (!Pronoun.isSomePronoun(headWord))
+					if (!Pronoun.isSomePronoun(headWord) && !m.gloss().toLowerCase().equals("that"))
 					{
 						currentSet.add(headWord);
 					}
