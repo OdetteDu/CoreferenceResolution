@@ -105,8 +105,8 @@ public class RuleBased implements CoreferenceSystem {
 		this.mentions = new ArrayList<ClusteredMention>();
 		this.discoveredEntities = new HashSet<Entity>();
 
-		//		exactMatch();
-		//		relaxedStringMatch();
+		exactMatch();
+		relaxedStringMatch();
 		//		predicateNominative();
 		//		roleAppositive();
 		acronym();
@@ -162,7 +162,7 @@ public class RuleBased implements CoreferenceSystem {
 			}
 		}
 	}
-	
+
 	private void simpleExactMatch()
 	{
 		for (Mention cm : doc.getMentions())
@@ -401,8 +401,9 @@ public class RuleBased implements CoreferenceSystem {
 						String mHeadWord = m.headWord();
 						if(doc.indexOfMention(m) > cmIndex)
 						{
-							if(cmHeadWord.contains(mHeadWord) && !this.notIWithinI(cm, m))
+							if(cmHeadWord.equals(mHeadWord) && !this.notIWithinI(cm, m))
 							{
+								//								System.out.println("Variant Head Match: "+cm+", "+m);
 								addToResult(cm, m);
 							}
 						}
@@ -426,6 +427,7 @@ public class RuleBased implements CoreferenceSystem {
 						String headWord = m.headWord();
 						if(this.headWordMap.containsKey(headWord) && headWordMap.get(headWord).contains(cmHeadWord) && doc.indexOfMention(m) > doc.indexOfMention(cm))
 						{
+							//							System.out.println("Trained Head Match: "+cm+", "+m);
 							addToResult(cm, m);
 						}
 					}
@@ -441,13 +443,12 @@ public class RuleBased implements CoreferenceSystem {
 			if (!Pronoun.isSomePronoun(cm.gloss()))
 			{
 				String cmHeadWord = cm.headWord();
-				int cmIndex = doc.indexOfMention(cm);
 				for (Mention m : doc.getMentions())
 				{
 					if(cm != m && m.getCorefferentWith() == null && !Pronoun.isSomePronoun(m.gloss()))
 					{
 						String mHeadWord = m.headWord();
-						if(doc.indexOfMention(m) > cmIndex && cmHeadWord.contains(mHeadWord) && cm.headToken().nerTag().equals(m.headToken().nerTag()) && cm.headToken().isPluralNoun() == m.headToken().isPluralNoun())
+						if(cmHeadWord.equals(mHeadWord) && cm.headToken().nerTag().equals(m.headToken().nerTag()) && cm.headToken().isPluralNoun() == m.headToken().isPluralNoun())
 						{
 							boolean hasNumber = false;
 							for(String n : RuleBased.NUMBERS_ARRAY)
@@ -461,6 +462,7 @@ public class RuleBased implements CoreferenceSystem {
 
 							if(!hasNumber)
 							{
+								//								System.out.println("Proper Head Match: "+cm+", "+m);
 								addToResult(cm, m);
 							}
 						}
@@ -484,7 +486,9 @@ public class RuleBased implements CoreferenceSystem {
 						String mHeadWord = m.headWord();
 						if(doc.indexOfMention(m) > cmIndex)
 						{
-							if(cm.gloss().contains(mHeadWord) && Name.isName(cm.gloss()) && Name.isName(m.gloss()) && cm.headToken().nerTag() == m.headToken().nerTag())
+							if(cm.gloss().contains(mHeadWord) 
+									&& Name.isName(cm.gloss()) && Name.isName(m.gloss()) 
+									&& cm.headToken().nerTag() == m.headToken().nerTag())
 							{
 								addToResult(cm, m);
 							}
