@@ -13,6 +13,7 @@ import cs224n.coref.Pronoun.Speaker;
 import cs224n.coref.Pronoun.Type;
 import cs224n.coref.Sentence;
 import cs224n.coref.Util;
+import cs224n.ling.Tree;
 import cs224n.util.Pair;
 
 public class RuleBased implements CoreferenceSystem {
@@ -21,6 +22,21 @@ public class RuleBased implements CoreferenceSystem {
 	private List<ClusteredMention> mentions;
 	private Set<Entity> discoveredEntities;
 	private Map<String, Set<String>> headWordMap;
+	public static final String[] STOP_WORDS_ARRAY = {"i", "me", "my", "myself", "we", "our", "ours","ourselves", "you", "your", "yours",
+		"yourself", "yourselves", "he", "him", "his", "himself", "she", "her", "hers",
+		"herself", "it", "its", "itself", "they", "them", "their", "theirs", "themselves",
+		"what", "which", "who", "whom", "this", "that", "these", "those", "am", "is", "are",
+		"was", "were", "be", "been", "being", "have", "has", "had", "having", "do", "does",
+		"did", "doing", "a", "an", "the", "and", "but", "if", "or", "because", "as", "until",
+		"while", "of", "at", "by", "for", "with", "about", "against", "between", "into",
+		"through", "during", "before", "after", "above", "below", "to", "from", "up", "down",
+		"in", "out", "on", "off", "over", "under", "again", "further", "then", "once", "here",
+		"there", "when", "where", "why", "how", "all", "any", "both", "each", "few", "more",
+		"most", "other", "some", "such", "no", "nor", "not", "only", "own", "same", "so",
+		"than", "too", "very", "s", "t", "can", "will", "just", "don", "should", "now"};
+	public static final Set<String> STOP_WORDS = new HashSet<String>(Arrays.asList(STOP_WORDS_ARRAY));
+	public static final String[] NUMBERS_ARRAY= {"0", "1", "2", "3", "4", "5", "6", "7", "8", "9"};
+	public static final  Set<String> NUMBERS = new HashSet<String>(Arrays.asList(NUMBERS_ARRAY));
 
 	private void addToHeadWordMap(String word1, String word2)
 	{
@@ -91,8 +107,8 @@ public class RuleBased implements CoreferenceSystem {
 
 		exactMatch();
 		relaxedStringMatch();
-		//		predicateNominative();
-		//		roleAppositive();
+//		predicateNominative();
+//		roleAppositive();
 		acronym();
 		strictHeadMatch();
 		variantHeadMatch();
@@ -101,7 +117,8 @@ public class RuleBased implements CoreferenceSystem {
 		flexHeadMatch();
 		makeRestSingleton();
 		handlePronoun();
-		//		System.out.println(this.doc.prettyPrint(this.discoveredEntities));
+//		pronounSingleton(null);
+//		System.out.println(this.doc.prettyPrint(this.discoveredEntities));
 		return mentions;
 	}
 
@@ -260,7 +277,7 @@ public class RuleBased implements CoreferenceSystem {
 				for(int i=indexBegin; i<indexEnd; i++)
 				{
 					String w = words.get(i).toLowerCase();
-					if(!w.equals("the") && !w.equals("of") && !w.equals("and"))
+					if(!this.STOP_WORDS.contains(w))
 					{
 						String c = words.get(i).trim().substring(0, 1).toUpperCase();
 						acronym += c;
@@ -281,6 +298,36 @@ public class RuleBased implements CoreferenceSystem {
 				}
 			}
 		}
+	}
+	
+	private boolean notIWithinI(Mention a, Mention b)
+	{
+		Tree<String> at = a.parse;
+		Tree<String> bt = b.parse;
+		if(at.getChildren() != null)
+		{
+			for(Tree<String> atc : at.getChildren())
+			{
+				if(b.equals(atc))
+				{
+					System.out.println("not i within i: "+a+", "+b);
+					return true;
+				}
+			}
+		}
+		
+		if(bt.getChildren() != null)
+		{
+			for(Tree<String> btc : bt.getChildren())
+			{
+				if(a.equals(btc))
+				{
+					System.out.println("not i within i: "+a+", "+b);
+					return true;
+				}
+			}
+		}
+		return false;
 	}
 
 	private void strictHeadMatch()
@@ -308,7 +355,8 @@ public class RuleBased implements CoreferenceSystem {
 									break;
 								}
 							}
-							if(cmHeadWord.contains(mHeadWord) && containsAll)
+							
+							if(cmHeadWord.contains(mHeadWord) && containsAll && !this.notIWithinI(cm, m))
 							{
 								addToResult(cm, m);
 							}
@@ -335,13 +383,12 @@ public class RuleBased implements CoreferenceSystem {
 						String mHeadWord = m.headWord();
 						if(doc.indexOfMention(m) > cmIndex)
 						{
-							if(cmHeadWord.contains(mHeadWord))
+							if(cmHeadWord.contains(mHeadWord) && !this.notIWithinI(cm, m))
 							{
 								addToResult(cm, m);
 							}
 						}
 					}
-
 				}
 			}
 
@@ -384,10 +431,22 @@ public class RuleBased implements CoreferenceSystem {
 						String mHeadWord = m.headWord();
 						if(doc.indexOfMention(m) > cmIndex && cmHeadWord.contains(mHeadWord) && cm.headToken().nerTag().equals(m.headToken().nerTag()) && cm.headToken().isPluralNoun() == m.headToken().isPluralNoun())
 						{
-							addToResult(cm, m);
+							boolean hasNumber = false;
+							for(String n : RuleBased.NUMBERS_ARRAY)
+							{
+								if(m.gloss().contains(n))
+								{
+									hasNumber = true;
+									break;
+								}
+							}
+							
+							if(!hasNumber)
+							{
+								addToResult(cm, m);
+							}
 						}
 					}
-
 				}
 			}
 		}
@@ -417,6 +476,33 @@ public class RuleBased implements CoreferenceSystem {
 			}
 		}
 	}
+
+	//	private void moreFlexHeadMatch()
+	//	{
+	//		for (Mention cm : doc.getMentions())
+	//		{
+	//			if (!Pronoun.isSomePronoun(cm.gloss()))
+	//			{
+	//				int cmIndex = doc.indexOfMention(cm);
+	//				for (Mention m : doc.getMentions())
+	//				{
+	//					if(cm != m && m.getCorefferentWith() == null && !Pronoun.isSomePronoun(m.gloss()))
+	//					{
+	//						Set<String> cms = new HashSet<String>();
+	//						cms.addAll(cm.gloss().split(" "));
+	//						String mHeadWord = m.headWord();
+	//						if(doc.indexOfMention(m) > cmIndex)
+	//						{
+	//							if(cm.gloss().contains(mHeadWord) && Name.isName(cm.gloss()) && Name.isName(m.gloss()) && cm.headToken().nerTag() == m.headToken().nerTag())
+	//							{
+	//								addToResult(cm, m);
+	//							}
+	//						}
+	//					}
+	//				}
+	//			}
+	//		}
+	//	}
 
 	private void makeRestSingleton()
 	{
@@ -449,8 +535,8 @@ public class RuleBased implements CoreferenceSystem {
 		this.flexPronounMatch(nonPronouns);
 		this.moreFlexPronounMatch(nonPronouns);
 		this.mostFlexPronounMatch(nonPronouns);
-//		this.mostmostFlexPronounMatch(nonPronouns);
-//		this.pronounSingleton(nonPronouns);
+		//		this.mostmostFlexPronounMatch(nonPronouns);
+		//		this.pronounSingleton(nonPronouns);
 		this.pronounSelfMatch();
 	}
 
@@ -1013,11 +1099,11 @@ public class RuleBased implements CoreferenceSystem {
 			{
 				ClusteredMention newCluster = m.markSingleton();
 				mentions.add(newCluster);
-				System.out.println("A Pronoun that no one wants it: "+m.gloss());
-				for(Mention mm : nonPronouns)
-				{
-					System.out.println(mm.gloss()+", "+mm.headToken().isPluralNoun());
-				}
+//				System.out.println("A Pronoun that no one wants it: "+m.gloss());
+//				for(Mention mm : nonPronouns)
+//				{
+//					System.out.println(mm.gloss()+", "+mm.headToken().isPluralNoun());
+//				}
 			}
 		}
 	}
