@@ -105,10 +105,10 @@ public class RuleBased implements CoreferenceSystem {
 		this.mentions = new ArrayList<ClusteredMention>();
 		this.discoveredEntities = new HashSet<Entity>();
 
-		exactMatch();
-		relaxedStringMatch();
-//		predicateNominative();
-//		roleAppositive();
+		//		exactMatch();
+		//		relaxedStringMatch();
+		//		predicateNominative();
+		//		roleAppositive();
 		acronym();
 		strictHeadMatch();
 		variantHeadMatch();
@@ -117,8 +117,8 @@ public class RuleBased implements CoreferenceSystem {
 		flexHeadMatch();
 		makeRestSingleton();
 		handlePronoun();
-//		pronounSingleton(null);
-//		System.out.println(this.doc.prettyPrint(this.discoveredEntities));
+		//		pronounSingleton(null);
+		//		System.out.println(this.doc.prettyPrint(this.discoveredEntities));
 		return mentions;
 	}
 
@@ -158,6 +158,24 @@ public class RuleBased implements CoreferenceSystem {
 				if(!Pronoun.isSomePronoun(m.gloss()))
 				{
 					singleMentions.put(mentionString,m);
+				}
+			}
+		}
+	}
+	
+	private void simpleExactMatch()
+	{
+		for (Mention cm : doc.getMentions())
+		{
+			if (!Pronoun.isSomePronoun(cm.gloss()))
+			{
+				for (Mention m : doc.getMentions())
+				{
+					if(cm != m && m.getCorefferentWith() == null && cm.gloss().equals(m.gloss()))
+					{
+						addToResult(cm, m);
+						break;
+					}
 				}
 			}
 		}
@@ -299,7 +317,7 @@ public class RuleBased implements CoreferenceSystem {
 			}
 		}
 	}
-	
+
 	private boolean notIWithinI(Mention a, Mention b)
 	{
 		Tree<String> at = a.parse;
@@ -315,7 +333,7 @@ public class RuleBased implements CoreferenceSystem {
 				}
 			}
 		}
-		
+
 		if(bt.getChildren() != null)
 		{
 			for(Tree<String> btc : bt.getChildren())
@@ -355,7 +373,7 @@ public class RuleBased implements CoreferenceSystem {
 									break;
 								}
 							}
-							
+
 							if(cmHeadWord.contains(mHeadWord) && containsAll && !this.notIWithinI(cm, m))
 							{
 								addToResult(cm, m);
@@ -440,7 +458,7 @@ public class RuleBased implements CoreferenceSystem {
 									break;
 								}
 							}
-							
+
 							if(!hasNumber)
 							{
 								addToResult(cm, m);
@@ -1099,11 +1117,11 @@ public class RuleBased implements CoreferenceSystem {
 			{
 				ClusteredMention newCluster = m.markSingleton();
 				mentions.add(newCluster);
-//				System.out.println("A Pronoun that no one wants it: "+m.gloss());
-//				for(Mention mm : nonPronouns)
-//				{
-//					System.out.println(mm.gloss()+", "+mm.headToken().isPluralNoun());
-//				}
+				//				System.out.println("A Pronoun that no one wants it: "+m.gloss());
+				//				for(Mention mm : nonPronouns)
+				//				{
+				//					System.out.println(mm.gloss()+", "+mm.headToken().isPluralNoun());
+				//				}
 			}
 		}
 	}
