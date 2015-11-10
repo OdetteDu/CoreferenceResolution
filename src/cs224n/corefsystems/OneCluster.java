@@ -20,7 +20,8 @@ public class OneCluster implements CoreferenceSystem {
 
 	@Override
 	public List<ClusteredMention> runCoreference(Document doc) {
-		
+//<<<<<<< HEAD
+//		
 		List<ClusteredMention> mentions = new ArrayList<ClusteredMention>();
 		ClusteredMention cluster = null;
 		
@@ -42,6 +43,9 @@ public class OneCluster implements CoreferenceSystem {
 		
 		
 		return mentions;
+//=======
+//		List<ClusteredMention> result = new ArrayList<ClusteredMention>();
+//		return result;
 	}
 
 }

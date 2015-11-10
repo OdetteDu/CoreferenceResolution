@@ -2,8 +2,14 @@
 <classpath>
 	<classpathentry kind="src" path="src"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.7"/>
+<<<<<<< HEAD
 	<classpathentry kind="lib" path="/Users/Admin/Workspace/Java/CoreferenceResolution/extlib/corenlp-070912-and-commit-b9a9232.jar"/>
 	<classpathentry kind="lib" path="/Users/Admin/Workspace/Java/CoreferenceResolution/extlib/joda-time.jar"/>
 	<classpathentry kind="lib" path="/Users/Admin/Workspace/Java/CoreferenceResolution/extlib/xom.jar"/>
+=======
+	<classpathentry kind="lib" path="/home/odette/Workspace/Java/pa3/extlib/corenlp-070912-and-commit-b9a9232.jar"/>
+	<classpathentry kind="lib" path="/home/odette/Workspace/Java/pa3/extlib/joda-time.jar"/>
+	<classpathentry kind="lib" path="/home/odette/Workspace/Java/pa3/extlib/xom.jar"/>
+>>>>>>> 376dc3def3a47fa697ecfe8a6ade2561accf6fdc
 	<classpathentry kind="output" path="bin"/>
 </classpath>
